@@ -129,7 +129,13 @@ Vector2 get_input_position(circuit_component* component, u32 inputID) {
 }
 
 Vector2 get_output_position(circuit_component* component, u32 outputID) {
-    Vector2 base = (Vector2){ 250, 100 };
+    Vector2 base;
+    if (component->numOutputs == 1) {
+        base =(Vector2){ 250, 100 };
+    } else {
+        base = (Vector2){250, 50.0F + ((float) outputID * (100.0F / (float) (component->numOutputs - 1)))};
+    }
+
     return Vector2Add(base, component->pos);
 }
 

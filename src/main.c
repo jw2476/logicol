@@ -14,6 +14,8 @@ int main(void) {
     InitWindow(width, height, "raylib [core] example - basic window");
     ToggleFullscreen();
 
+    SetTargetFPS(60);
+
     Camera2D camera;
     CLEAR(camera);
 
