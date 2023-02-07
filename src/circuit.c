@@ -29,8 +29,31 @@ circuit_component* circuit_add_component(circuit_circuit* circuit, circuit_compo
     component->id = ((u64)rand() << 32) | (u64)rand();
     component->type = type;
 
-    component->numInputs = 2;
-    component->numOutputs = 1;
+    switch (type) {
+        case AND:
+        case OR:
+            component->numInputs = 2;
+            break;
+        case NOT:
+        case OUTPUT:
+            component->numInputs = 1;
+            break;
+        case INPUT:
+            component->numInputs = 0;
+            break;
+    }
+
+    switch (type) {
+        case AND:
+        case OR:
+        case NOT:
+        case INPUT:
+            component->numOutputs = 1;
+            break;
+        case OUTPUT:
+            component->numOutputs = 0;
+            break;
+    }
 
     component->inputs = malloc(sizeof(circuit_connection) * component->numInputs);
     memset(component->inputs, 0, sizeof(circuit_connection) * component->numInputs);
@@ -46,7 +69,13 @@ void circuit_connect(circuit_circuit* circuit, circuit_component* from, u32 inpu
 }
 
 Vector2 get_input_position(circuit_component* component, u32 inputID) {
-    Vector2 base = { 0, 50.0F + ((float)inputID * 100.0F) };
+    Vector2 base;
+    if (component->numInputs == 1) {
+        base =(Vector2){ 0, 100 };
+    } else {
+        base = (Vector2){0, 50.0F + ((float) inputID * (100.0F / (float) (component->numInputs - 1)))};
+    }
+
     if (component->type == OR) {
         base.x += 35;
     }

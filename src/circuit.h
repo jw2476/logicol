@@ -20,8 +20,11 @@ typedef struct circuit_connection_t {
 } circuit_connection;
 
 typedef enum circuit_component_type_t {
-    AND,
-    OR
+    AND = 0,
+    OR,
+    NOT,
+    INPUT,
+    OUTPUT
 } circuit_component_type;
 
 typedef struct circuit_component_t {

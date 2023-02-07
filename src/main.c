@@ -3,6 +3,7 @@
 #include "draw.h"
 #include "circuit.h"
 #include "raymath.h"
+#include "rlgl.h"
 
 int main(void) {
     init();
@@ -72,8 +73,8 @@ int main(void) {
         }
 
         if (moving != NULL) {
-            moving->pos.x += GetMouseDelta().x;
-            moving->pos.y += GetMouseDelta().y;
+            moving->pos.x += GetMouseDelta().x / camera.zoom;
+            moving->pos.y += GetMouseDelta().y / camera.zoom;
         }
 
         if ((moving != NULL) && IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
@@ -113,8 +114,20 @@ int main(void) {
             circuit_add_component(&circuit, AND, cursorPos);
         }
 
-        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_O)) {
+        if (IsKeyDown(KEY_LEFT_CONTROL) && !IsKeyDown(KEY_LEFT_SHIFT) && IsKeyPressed(KEY_O)) {
             circuit_add_component(&circuit, OR, cursorPos);
+        }
+
+        if (IsKeyDown(KEY_LEFT_CONTROL) && !IsKeyDown(KEY_LEFT_SHIFT) && IsKeyPressed(KEY_N)) {
+            circuit_add_component(&circuit, NOT, cursorPos);
+        }
+
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyDown(KEY_LEFT_SHIFT) && IsKeyPressed(KEY_I)) {
+            circuit_add_component(&circuit, INPUT, cursorPos);
+        }
+
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyDown(KEY_LEFT_SHIFT) && IsKeyPressed(KEY_O)) {
+            circuit_add_component(&circuit, OUTPUT, cursorPos);
         }
 
         // Zooming
@@ -131,11 +144,16 @@ int main(void) {
         BeginDrawing();
         BeginMode2D(camera);
         {
-            ClearBackground(RAYWHITE);
+            ClearBackground(DARK);
+
+            if (IsKeyDown(KEY_F)) {
+                DrawFPS((int)cursorPos.x + 32, (int)cursorPos.y + 32);
+            }
+
             draw_circuit(&circuit);
 
             if (connecting.component) {
-                DrawLineBezier(Vector2Add(get_output_position(connecting.component, connecting.outputID), (Vector2){ 100, 0 }), cursorPos, 8.0F, GRAY);
+                DrawLineBezier(Vector2Add(get_output_position(connecting.component, connecting.outputID), (Vector2){ 100, 0 }), cursorPos, 8.0F, CONNECTION);
             }
 
             if (inserting) {

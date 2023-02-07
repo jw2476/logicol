@@ -42,3 +42,8 @@ typedef float   f32;
 typedef double  f64;
 
 void init();
+
+#define DARK (Color){ 24, 24, 27, 255 }
+#define COMPONENT (Color){ 139, 92, 246, 255 }
+#define WIRE (Color){ 113, 113, 122, 255 }
+#define CONNECTION (Color){ 14, 165, 233, 255 }
