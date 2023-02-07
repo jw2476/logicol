@@ -47,3 +47,5 @@ void init();
 #define COMPONENT (Color){ 139, 92, 246, 255 }
 #define WIRE (Color){ 113, 113, 122, 255 }
 #define CONNECTION (Color){ 14, 165, 233, 255 }
+#define ON (Color){ 16, 185, 129, 255 }
+#define OFF (Color){ 239, 68, 68, 255 }

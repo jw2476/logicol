@@ -39,6 +39,8 @@ void draw_and(circuit_component* component) {
     p1.y -= 8;
     p5.y += 8;
     DrawLineEx(p5, p1, 16.0F, COMPONENT);
+
+    DrawText(component->name, 50 + (int)component->pos.x, 68 + (int)component->pos.y, 64, COMPONENT);
 }
 
 void draw_or(circuit_component* component) {
@@ -61,6 +63,8 @@ void draw_or(circuit_component* component) {
     p1.x += 5.3F;
     p3.x += 5.3F;
     DrawLineBezierQuad(p3, p1, c3, 16.0F, COMPONENT);
+
+    DrawText(component->name, 90 + (int)component->pos.x, 68 + (int)component->pos.y, 64, COMPONENT);
 }
 
 void draw_not(circuit_component* component) {
@@ -76,41 +80,63 @@ void draw_not(circuit_component* component) {
     DrawLineEx(p2, p3, 16.0F, COMPONENT);
     DrawLineEx(p3, p1, 16.0F, COMPONENT);
     DrawCircle((int)p4.x, (int)p4.y, 27, COMPONENT);
+
+    DrawText(component->name, 20 + (int)component->pos.x, 76 + (int)component->pos.y, 48, COMPONENT);
 }
 
 void draw_input(circuit_component* component) {
     Rectangle rectangle = { component->pos.x, component->pos.y, 250, 200 };
 
-    DrawRectangleLinesEx(rectangle, 16.0F, COMPONENT);
+    DrawRectangleLinesEx(rectangle, 16.0F, component->internallyActive ? ON : OFF);
 
     draw_wire(get_output_position(component, 0), RIGHT);
+
+    DrawText(component->name, 50 + (int)component->pos.x, 68 + (int)component->pos.y, 64, component->internallyActive ? ON : OFF);
 }
 
 void draw_output(circuit_component* component) {
     Rectangle rectangle = { component->pos.x, component->pos.y, 250, 200 };
 
-    DrawRectangleLinesEx(rectangle, 16.0F, COMPONENT);
+    DrawRectangleLinesEx(rectangle, 16.0F, component->internallyActive ? ON : OFF);
 
     draw_wire(get_input_position(component, 0), LEFT);
+
+    DrawText(component->name, 50 + (int)component->pos.x, 68 + (int)component->pos.y, 64, component->internallyActive ? ON : OFF);
 }
 
-void draw_connection(Vector2 from, Vector2 to) {
-    DrawLineBezier(from, to, 8.0F, CONNECTION);
+void draw_custom(circuit_component* component) {
+    Rectangle rectangle = { component->pos.x, component->pos.y, 250, 200 };
+
+    DrawRectangleLinesEx(rectangle, 16.0F, COMPONENT);
+
+    for (u32 i = 0; i < component->numInputs; i++) {
+        draw_wire(get_input_position(component, i), LEFT);
+    }
+
+    for (u32 i = 0; i < component->numOutputs; i++) {
+        draw_wire(get_output_position(component, i), RIGHT);
+    }
+
+    DrawText(component->name, 50 + (int)component->pos.x, 68 + (int)component->pos.y, 64, COMPONENT);
+}
+
+void draw_connection(Vector2 from, Vector2 to, bool on) {
+    DrawLineBezier(from, to, 8.0F, on ? ON : OFF);
 }
 
 typedef void(*draw_function)(circuit_component*);
 
-static draw_function draw_functions[] = { draw_and, draw_or, draw_not, draw_input, draw_output };
+static draw_function draw_functions[] = { draw_and, draw_or, draw_not, draw_input, draw_output, draw_custom };
 
 void draw_circuit(circuit_circuit* circuit) {
     for (u64 i = 0; i < circuit->numComponents; i++) {
         draw_functions[circuit->components[i].type](&circuit->components[i]);
 
         for (u32 j = 0; j < circuit->components[i].numInputs; j++) {
-            if (circuit->components[i].inputs[j].component) {
+            if (circuit->components[i].inputs[j].componentID != 0) {
                 Vector2 from = Vector2Add(get_input_position(&circuit->components[i], j), (Vector2){ -100, 0 });
-                Vector2 to = Vector2Add(get_output_position(circuit->components[i].inputs[j].component, j), (Vector2){ 100, 0 });
-                draw_connection(from, to);
+                Vector2 to = Vector2Add(get_output_position(circuit_get_component(circuit, circuit->components[i].inputs[j].componentID), circuit->components[i].inputs[j].outputID), (Vector2){ 100, 0 });
+                draw_connection(from, to, circuit->components[i].inputs[j].on);
             }
         }
     }

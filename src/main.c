@@ -4,6 +4,7 @@
 #include "circuit.h"
 #include "raymath.h"
 #include "rlgl.h"
+#include "simulate.h"
 
 int main(void) {
     init();
@@ -19,13 +20,17 @@ int main(void) {
     camera.zoom = 1.0F;
 
     circuit_circuit circuit = circuit_init();
-    circuit_component* and = circuit_add_component(&circuit, AND, (Vector2){ 100, 100 });
-    circuit_component* or = circuit_add_component(&circuit, OR, (Vector2){ 1000, 1000 });
+
+    u32 numCircuits = 0;
+    circuit_circuit* library = malloc(0);
 
     circuit_connection connecting;
     CLEAR(connecting);
 
     circuit_component* moving = NULL;
+
+    bool makingSubcomponent = false;
+    u32 componentNamePtr = 0;
 
     bool inserting = false;
     u32 insertionBufferPtr = 0;
@@ -36,13 +41,12 @@ int main(void) {
     {
         Vector2 cursorPos = GetScreenToWorld2D(GetMousePosition(), camera);
 
-
         // Connections
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
             for (u64 i = 0; i < circuit.numComponents; i++) {
                 for (u64 j = 0; j < circuit.components[i].numOutputs; j++) {
                     if (Vector2Distance(cursorPos, Vector2Add(get_output_position(&circuit.components[i], j), (Vector2){ 100, 0 })) < 32.0F) {
-                        connecting.component = &circuit.components[i];
+                        connecting.componentID = circuit.components[i].id;
                         connecting.outputID = j;
                         break;
                     }
@@ -50,11 +54,11 @@ int main(void) {
             }
         }
 
-        if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT) && (connecting.component != NULL)) {
+        if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT) && (connecting.componentID != 0)) {
             for (u64 i = 0; i < circuit.numComponents; i++) {
                 for (u64 j = 0; j < circuit.components[i].numInputs; j++) {
                     if (Vector2Distance(cursorPos, Vector2Add(get_input_position(&circuit.components[i], j), (Vector2){ -100, 0})) < 32.0F) {
-                        circuit_connect(&circuit, &circuit.components[i], j, connecting.component, connecting.outputID);
+                        circuit_connect(&circuit, &circuit.components[i], j, circuit_get_component(&circuit, connecting.componentID), connecting.outputID);
                         break;
                     }
                 }
@@ -94,18 +98,19 @@ int main(void) {
             }
         }
 
-        if (IsKeyPressed(KEY_I) && !inserting) {
+        if (!IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_I) && !inserting) {
             inserting = true;
             memset(insertionBuffer, 0, sizeof(char) * 100);
             insertionBufferPtr = 0;
         }
 
         if (inserting && IsKeyPressed(KEY_ENTER)) {
-            if (strcmp(insertionBuffer, "AND") == 0) {
-                circuit_add_component(&circuit, AND, cursorPos);
-            } else if (strcmp(insertionBuffer, "OR") == 0) {
-                circuit_add_component(&circuit, OR, cursorPos);
+            for (u32 i = 0; i < numCircuits; i++) {
+                if (strcmp(library[i].name, insertionBuffer) == 0) {
+                    circuit_add_custom_component(&circuit, i, library, cursorPos);
+                }
             }
+
 
             inserting = false;
         }
@@ -140,6 +145,39 @@ int main(void) {
         if (camera.zoom > 3.0F) camera.zoom = 3.0F;
         else if (camera.zoom < 0.1F) camera.zoom = 0.1F;
 
+        // Input Toggling
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            for (u64 i = 0; i < circuit.numComponents; i++) {
+                if (Vector2Distance(circuit.components[i].pos, cursorPos) < 32.0F) {
+                    if (circuit.components[i].type == INPUT) {
+                        circuit.components[i].internallyActive = !circuit.components[i].internallyActive;
+                    }
+                }
+            }
+        }
+
+        // Subcomponents
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_C)) {
+            makingSubcomponent = true;
+            componentNamePtr = 0;
+            CLEAR(componentNamePtr);
+        }
+
+        if (makingSubcomponent) {
+            char character;
+            while ((character = (char)GetCharPressed()) != 0) {
+                circuit.name[componentNamePtr++] = character;
+            }
+
+            if (IsKeyPressed(KEY_ENTER)) {
+                numCircuits++;
+                library = realloc(library, sizeof(circuit_circuit) * numCircuits);
+                library[numCircuits - 1] = circuit;
+                circuit = circuit_init();
+                makingSubcomponent = false;
+            }
+        }
+
         // Drawing
         BeginDrawing();
         BeginMode2D(camera);
@@ -152,17 +190,24 @@ int main(void) {
 
             draw_circuit(&circuit);
 
-            if (connecting.component) {
-                DrawLineBezier(Vector2Add(get_output_position(connecting.component, connecting.outputID), (Vector2){ 100, 0 }), cursorPos, 8.0F, CONNECTION);
+            if (connecting.componentID != 0) {
+                DrawLineBezier(Vector2Add(get_output_position(circuit_get_component(&circuit, connecting.componentID), connecting.outputID), (Vector2){ 100, 0 }), cursorPos, 8.0F, CONNECTION);
+            }
+
+            if (makingSubcomponent) {
+                Vector2 pos = GetScreenToWorld2D((Vector2){ 32, 32 }, camera);
+                DrawText(circuit.name, (int)pos.x, (int)pos.y, (int)(48 / camera.zoom), BLUE);
             }
 
             if (inserting) {
                 Vector2 pos = GetScreenToWorld2D((Vector2){ 32, 32 }, camera);
-                DrawText(insertionBuffer, (int)pos.x, (int)pos.y, 48, BLUE);
+                DrawText(insertionBuffer, (int)pos.x, (int)pos.y, (int)(48 / camera.zoom), BLUE);
             }
         }
         EndMode2D();
         EndDrawing();
+
+        simulate(&circuit, library);
     }
 
     CloseWindow();

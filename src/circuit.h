@@ -15,8 +15,9 @@ typedef enum wire_direction_t {
 } wire_direction;
 
 typedef struct circuit_connection_t {
-    circuit_component* component;
+    u64 componentID;
     u32 outputID;
+    bool on;
 } circuit_connection;
 
 typedef enum circuit_component_type_t {
@@ -24,12 +25,14 @@ typedef enum circuit_component_type_t {
     OR,
     NOT,
     INPUT,
-    OUTPUT
+    OUTPUT,
+    CUSTOM
 } circuit_component_type;
 
 typedef struct circuit_component_t {
     u64 id;
     circuit_component_type type;
+    const char* name;
 
     u32 numInputs;
     circuit_connection* inputs;
@@ -37,9 +40,14 @@ typedef struct circuit_component_t {
     u32 numOutputs;
 
     Vector2 pos;
+
+    u32 innerID; // Used for custom components
+    bool internallyActive; // Used to show if inputs or outputs are on
 } circuit_component;
 
 typedef struct circuit_circuit_t {
+    char name[100];
+
     u64 numComponents;
     circuit_component* components;
 } circuit_circuit;
@@ -48,7 +56,10 @@ circuit_circuit circuit_init();
 void circuit_destroy(circuit_circuit* circuit);
 
 circuit_component* circuit_add_component(circuit_circuit* circuit, circuit_component_type type, Vector2 pos);
+circuit_component* circuit_add_custom_component(circuit_circuit* circuit, u32 innerID, circuit_circuit* library, Vector2 pos);
 void circuit_connect(circuit_circuit* circuit, circuit_component* from, u32 inputID, circuit_component* to, u32 outputID);
 
 Vector2 get_input_position(circuit_component* component, u32 inputID);
 Vector2 get_output_position(circuit_component* component, u32 outputID);
+
+circuit_component* circuit_get_component(circuit_circuit* circuit, u64 id);
