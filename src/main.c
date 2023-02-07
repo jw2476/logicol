@@ -24,8 +24,11 @@ int main(void) {
     circuit_connection connecting;
     CLEAR(connecting);
 
+    circuit_component* moving = NULL;
+
     while (!WindowShouldClose())
     {
+        // Connections
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
             Vector2 pos = GetMousePosition();
             for (u64 i = 0; i < circuit.numComponents; i++) {
@@ -51,6 +54,24 @@ int main(void) {
             }
 
             CLEAR(connecting);
+        }
+
+        // Component Movement
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            for (u64 i = 0; i < circuit.numComponents; i++) {
+                if (Vector2Distance(circuit.components[i].pos, GetMousePosition()) < 32.0F) {
+                    moving = &circuit.components[i];
+                }
+            }
+        }
+
+        if (moving != NULL) {
+            moving->pos.x += GetMouseDelta().x;
+            moving->pos.y += GetMouseDelta().y;
+        }
+
+        if ((moving != NULL) && IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
+            moving = NULL;
         }
 
         if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
