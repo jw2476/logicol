@@ -1,0 +1,19 @@
+{
+	"name":	"asdsadasd",
+	"shortname":	"asdsadasd",
+	"description":	"asdsadasd",
+	"author":	"AUTHOR",
+	"version":	"0.0.1",
+	"component_type":	"DETERMINISTIC",
+	"hash":	"HASH WILL GO HERE",
+	"inputs":	[],
+	"outputs":	[],
+	"subcomponents":	[{
+			"name":	"AND",
+			"subcomponent_id":	5,
+			"position":	{
+				"x":	1904,
+				"y":	920
+			}
+		}]
+}

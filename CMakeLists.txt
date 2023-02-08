@@ -5,7 +5,9 @@ add_subdirectory(vendor/raylib)
 
 set(CMAKE_C_STANDARD 11)
 
-file(GLOB_RECURSE SRC "src/*.c")
+file(GLOB_RECURSE SRC "src/*.c" "vendor/cJSON/cJSON.c")
+
+include_directories(vendor/cJSON)
 
 add_executable(${PROJECT_NAME} ${SRC})
 target_link_libraries(${PROJECT_NAME} raylib)

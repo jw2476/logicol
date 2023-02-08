@@ -5,6 +5,7 @@
 #include "raymath.h"
 #include "rlgl.h"
 #include "simulate.h"
+#include "fs.h"
 
 int main(void) {
     init();
@@ -21,23 +22,22 @@ int main(void) {
 
     camera.zoom = 1.0F;
 
-    circuit_circuit circuit = circuit_init();
-
-    u32 numCircuits = 0;
-    circuit_circuit* library = malloc(0);
+    circuit_library library = circuit_library_init();
+    load_circuit(&library.circuits[0], "../output/awe-not.circuit");
 
     circuit_connection connecting;
     CLEAR(connecting);
 
     circuit_component* moving = NULL;
 
-    bool makingSubcomponent = false;
-    u32 componentNamePtr = 0;
+    bool insertMode = false;
+    bool saveMode = false;
+    bool openMode = false;
+    u32 inputPtr = 0;
+    char inputBuffer[100];
+    memset(inputBuffer, 0, sizeof(char) * 100);
 
-    bool inserting = false;
-    u32 insertionBufferPtr = 0;
-    char insertionBuffer[100];
-    memset(insertionBuffer, 0, sizeof(char) * 100);
+    double lastSaved = 0;
 
     while (!WindowShouldClose())
     {
@@ -45,10 +45,10 @@ int main(void) {
 
         // Connections
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-            for (u64 i = 0; i < circuit.numComponents; i++) {
-                for (u64 j = 0; j < circuit.components[i].numOutputs; j++) {
-                    if (Vector2Distance(cursorPos, Vector2Add(get_output_position(&circuit.components[i], j), (Vector2){ 100, 0 })) < 32.0F) {
-                        connecting.componentID = circuit.components[i].id;
+            for (u64 i = 0; i < get_current_circuit(&library)->numComponents; i++) {
+                for (u64 j = 0; j < get_current_circuit(&library)->components[i].numOutputs; j++) {
+                    if (Vector2Distance(cursorPos, Vector2Add(get_output_position(&get_current_circuit(&library)->components[i], j), (Vector2){ 100, 0 })) < 32.0F) {
+                        connecting.componentID = get_current_circuit(&library)->components[i].id;
                         connecting.outputID = j;
                         break;
                     }
@@ -57,10 +57,10 @@ int main(void) {
         }
 
         if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT) && (connecting.componentID != 0)) {
-            for (u64 i = 0; i < circuit.numComponents; i++) {
-                for (u64 j = 0; j < circuit.components[i].numInputs; j++) {
-                    if (Vector2Distance(cursorPos, Vector2Add(get_input_position(&circuit.components[i], j), (Vector2){ -100, 0})) < 32.0F) {
-                        circuit_connect(&circuit, &circuit.components[i], j, circuit_get_component(&circuit, connecting.componentID), connecting.outputID);
+            for (u64 i = 0; i < get_current_circuit(&library)->numComponents; i++) {
+                for (u64 j = 0; j < get_current_circuit(&library)->components[i].numInputs; j++) {
+                    if (Vector2Distance(cursorPos, Vector2Add(get_input_position(&get_current_circuit(&library)->components[i], j), (Vector2){ -100, 0})) < 32.0F) {
+                        circuit_connect(get_current_circuit(&library), &get_current_circuit(&library)->components[i], j, circuit_get_component(get_current_circuit(&library), connecting.componentID), connecting.outputID);
                         break;
                     }
                 }
@@ -71,9 +71,9 @@ int main(void) {
 
         // Component Movement
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-            for (u64 i = 0; i < circuit.numComponents; i++) {
-                if (Vector2Distance(circuit.components[i].pos, cursorPos) < 32.0F) {
-                    moving = &circuit.components[i];
+            for (u64 i = 0; i < get_current_circuit(&library)->numComponents; i++) {
+                if (Vector2Distance(get_current_circuit(&library)->components[i].pos, cursorPos) < 32.0F) {
+                    moving = &get_current_circuit(&library)->components[i];
                 }
             }
         }
@@ -93,48 +93,48 @@ int main(void) {
         }
 
         // Component Insertion
-        if (inserting) {
+        if (saveMode || insertMode || openMode) {
             char character;
             while ((character = (char)GetCharPressed()) != 0) {
-                insertionBuffer[insertionBufferPtr++] = character;
+                inputBuffer[inputPtr++] = character;
             }
         }
 
-        if (!IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_I) && !inserting) {
-            inserting = true;
-            memset(insertionBuffer, 0, sizeof(char) * 100);
-            insertionBufferPtr = 0;
+        if (!IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_I) && !saveMode && !openMode) {
+            insertMode = true;
+            saveMode = false;
+            memset(inputBuffer, 0, sizeof(char) * 100);
+            inputPtr = 0;
         }
 
-        if (inserting && IsKeyPressed(KEY_ENTER)) {
-            for (u32 i = 0; i < numCircuits; i++) {
-                if (strcmp(library[i].name, insertionBuffer) == 0) {
-                    circuit_add_custom_component(&circuit, i, library, cursorPos);
+        if (insertMode && IsKeyPressed(KEY_ENTER)) {
+            for (u32 i = 0; i < library.numCircuits; i++) {
+                if (strcmp(library.circuits[i].name, inputBuffer) == 0) {
+                    circuit_add_custom_component(get_current_circuit(&library), i, &library, cursorPos);
                 }
             }
 
-
-            inserting = false;
+            insertMode = false;
         }
 
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_A)) {
-            circuit_add_component(&circuit, AND, cursorPos);
+            circuit_add_component(get_current_circuit(&library), AND, cursorPos);
         }
 
         if (IsKeyDown(KEY_LEFT_CONTROL) && !IsKeyDown(KEY_LEFT_SHIFT) && IsKeyPressed(KEY_O)) {
-            circuit_add_component(&circuit, OR, cursorPos);
+            circuit_add_component(get_current_circuit(&library), OR, cursorPos);
         }
 
         if (IsKeyDown(KEY_LEFT_CONTROL) && !IsKeyDown(KEY_LEFT_SHIFT) && IsKeyPressed(KEY_N)) {
-            circuit_add_component(&circuit, NOT, cursorPos);
+            circuit_add_component(get_current_circuit(&library), NOT, cursorPos);
         }
 
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyDown(KEY_LEFT_SHIFT) && IsKeyPressed(KEY_I)) {
-            circuit_add_component(&circuit, INPUT, cursorPos);
+            circuit_add_component(get_current_circuit(&library), INPUT, cursorPos);
         }
 
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyDown(KEY_LEFT_SHIFT) && IsKeyPressed(KEY_O)) {
-            circuit_add_component(&circuit, OUTPUT, cursorPos);
+            circuit_add_component(get_current_circuit(&library), OUTPUT, cursorPos);
         }
 
         // Zooming
@@ -149,34 +149,78 @@ int main(void) {
 
         // Input Toggling
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-            for (u64 i = 0; i < circuit.numComponents; i++) {
-                if (Vector2Distance(circuit.components[i].pos, cursorPos) < 32.0F) {
-                    if (circuit.components[i].type == INPUT) {
-                        circuit.components[i].internallyActive = !circuit.components[i].internallyActive;
+            for (u64 i = 0; i < get_current_circuit(&library)->numComponents; i++) {
+                if (Vector2Distance(get_current_circuit(&library)->components[i].pos, cursorPos) < 32.0F) {
+                    if (get_current_circuit(&library)->components[i].type == INPUT) {
+                        get_current_circuit(&library)->components[i].internallyActive = !get_current_circuit(&library)->components[i].internallyActive;
                     }
                 }
             }
         }
 
-        // Subcomponents
-        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_C)) {
-            makingSubcomponent = true;
-            componentNamePtr = 0;
-            CLEAR(componentNamePtr);
+        bool hasName = strlen(get_current_circuit(&library)->name) != 0;
+        if (IsKeyDown(KEY_LEFT_ALT) && IsKeyPressed(KEY_S)) {
+            if (!hasName || IsKeyDown(KEY_LEFT_SHIFT)) {
+                saveMode = true;
+                inputPtr = 0;
+                memset(inputBuffer, 0, sizeof(char) * 100);
+            } else {
+                char buffer[100];
+                sprintf(buffer, "../output/%s.circuit", get_current_circuit(&library)->name);
+                save_circuit(get_current_circuit(&library), buffer);
+                lastSaved = GetTime();
+            }
         }
 
-        if (makingSubcomponent) {
-            char character;
-            while ((character = (char)GetCharPressed()) != 0) {
-                circuit.name[componentNamePtr++] = character;
+        if (saveMode && IsKeyPressed(KEY_ENTER)) {
+            memcpy(get_current_circuit(&library)->name, inputBuffer, inputPtr + 1); // Rename component
+
+            char buffer[100];
+            sprintf(buffer, "../output/%s.circuit", get_current_circuit(&library)->name);
+            save_circuit(get_current_circuit(&library), buffer);
+            lastSaved = GetTime();
+            saveMode = false;
+        }
+
+        // Open
+        if (IsKeyDown(KEY_LEFT_ALT) && IsKeyPressed(KEY_O)) {
+            openMode = true;
+            inputPtr = 0;
+            memset(inputBuffer, 0, sizeof(char) * 100);
+        }
+
+        if (openMode && IsKeyPressed(KEY_ENTER)) {
+            // Check if component is already in library
+            bool found = false;
+            for (u32 i = 0; i < library.numCircuits; i++) {
+                if (strcmp(inputBuffer, library.circuits[i].name) == 0) {
+                    library.currentCircuitID = i;
+                    found = true;
+                }
             }
 
-            if (IsKeyPressed(KEY_ENTER)) {
-                numCircuits++;
-                library = realloc(library, sizeof(circuit_circuit) * numCircuits);
-                library[numCircuits - 1] = circuit;
-                circuit = circuit_init();
-                makingSubcomponent = false;
+            if (!found) {
+                // TODO: Check if file exists
+
+                circuit_library_create_circuit(&library);
+                library.currentCircuitID = library.numCircuits - 1;
+
+                char buffer[100];
+                sprintf(buffer, "../output/%s.circuit", inputBuffer);
+                load_circuit(get_current_circuit(&library), buffer); // Load circuit into new slot
+            }
+
+            openMode = false;
+        }
+
+        // TPS Counter
+        double now = GetTime();
+        double nextFrame = now + 1 / 60.0f;
+        u32 ticks = 0;
+        while (GetTime() < nextFrame) {
+            for (u32 j = 0; j < 1000; j++) {
+                simulate(get_current_circuit(&library), &library);
+                ticks++;
             }
         }
 
@@ -190,26 +234,50 @@ int main(void) {
                 DrawFPS((int)cursorPos.x + 32, (int)cursorPos.y + 32);
             }
 
-            draw_circuit(&circuit);
+            if (IsKeyDown(KEY_T)) {
+                char buffer[20];
+                sprintf(buffer, "%d", ticks * 60);
+                DrawText(buffer, (int)cursorPos.x + 32, (int)cursorPos.y + 32, (int)(24 / camera.zoom), GREEN);
+            }
+
+            draw_circuit(get_current_circuit(&library));
 
             if (connecting.componentID != 0) {
-                DrawLineBezier(Vector2Add(get_output_position(circuit_get_component(&circuit, connecting.componentID), connecting.outputID), (Vector2){ 100, 0 }), cursorPos, 8.0F, CONNECTION);
-            }
-
-            if (makingSubcomponent) {
-                Vector2 pos = GetScreenToWorld2D((Vector2){ 32, 32 }, camera);
-                DrawText(circuit.name, (int)pos.x, (int)pos.y, (int)(48 / camera.zoom), BLUE);
-            }
-
-            if (inserting) {
-                Vector2 pos = GetScreenToWorld2D((Vector2){ 32, 32 }, camera);
-                DrawText(insertionBuffer, (int)pos.x, (int)pos.y, (int)(48 / camera.zoom), BLUE);
+                DrawLineBezier(Vector2Add(get_output_position(circuit_get_component(get_current_circuit(&library), connecting.componentID), connecting.outputID), (Vector2){ 100, 0 }), cursorPos, 8.0F, CONNECTION);
             }
         }
         EndMode2D();
+        {
+            char textBuffer[100];
+            memset(textBuffer, 0, 100);
+
+            if (saveMode) {
+                sprintf(textBuffer, "Save as: %s\n", inputBuffer);
+            }
+
+            if (insertMode) {
+                sprintf(textBuffer, "Insert: %s\n", inputBuffer);
+            }
+
+            if (openMode) {
+                sprintf(textBuffer, "Open: %s\n", inputBuffer);
+            }
+
+            if (!insertMode && !saveMode && !openMode) {
+                sprintf(textBuffer, "Editing: %s\n", get_current_circuit(&library)->name);
+            }
+
+            if ((GetTime() - lastSaved ) < 3) {
+                char buffer[100];
+                memset(buffer, 0, 100);
+                sprintf(buffer, "Saved as: %s.circuit", get_current_circuit(&library)->name);
+                strcat(textBuffer, buffer);
+            }
+
+            DrawText(textBuffer, 32, 32, 48, BLUE);
+        }
         EndDrawing();
 
-        simulate(&circuit, library);
     }
 
     CloseWindow();

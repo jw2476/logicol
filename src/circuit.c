@@ -10,6 +10,7 @@ circuit_circuit circuit_init() {
     CLEAR(circuit);
 
     circuit.components = malloc(0);
+    circuit.nextID = 1;
 
     return circuit;
 }
@@ -26,7 +27,7 @@ circuit_component* circuit_add_component(circuit_circuit* circuit, circuit_compo
     circuit->components = realloc(circuit->components, sizeof(circuit_component) * circuit->numComponents);
     circuit_component* component = &circuit->components[circuit->numComponents - 1];
     CLEAR(*component);
-    component->id = ((u64)rand() << 32) | (u64)rand();
+    component->id = circuit->nextID++;
     component->type = type;
 
     switch (type) {
@@ -81,20 +82,20 @@ circuit_component* circuit_add_component(circuit_circuit* circuit, circuit_compo
     return component;
 }
 
-circuit_component* circuit_add_custom_component(circuit_circuit* circuit, u32 innerID, circuit_circuit* library, Vector2 pos) {
+circuit_component* circuit_add_custom_component(circuit_circuit* circuit, u32 innerID, circuit_library* library, Vector2 pos) {
     circuit->numComponents++;
     circuit->components = realloc(circuit->components, sizeof(circuit_component) * circuit->numComponents);
     circuit_component* component = &circuit->components[circuit->numComponents - 1];
     CLEAR(*component);
-    component->id = ((u64)rand() << 32) | (u64)rand();
+    component->id = circuit->nextID++;
     component->type = CUSTOM;
-    component->name = library[innerID].name;
+    component->name = library->circuits[innerID].name;
 
-    for (u64 i = 0; i < library[innerID].numComponents; i++) {
-        if (library[innerID].components[i].type == INPUT) {
+    for (u64 i = 0; i < library->circuits[innerID].numComponents; i++) {
+        if (library->circuits[innerID].components[i].type == INPUT) {
             component->numInputs++;
         }
-        else if (library[innerID].components[i].type == OUTPUT) {
+        else if (library->circuits[innerID].components[i].type == OUTPUT) {
             component->numOutputs++;
         }
     }
@@ -145,4 +146,27 @@ circuit_component* circuit_get_component(circuit_circuit* circuit, u64 id) {
             return &circuit->components[i];
         }
     }
+}
+
+circuit_library circuit_library_init() {
+    circuit_library library;
+    CLEAR(library);
+
+    library.numCircuits = 1;
+    library.circuits = malloc(sizeof(circuit_circuit));
+    library.circuits[0] = circuit_init();
+
+    return library;
+}
+
+circuit_circuit* circuit_library_create_circuit(circuit_library* library) {
+    library->numCircuits++;
+    library->circuits = realloc(library->circuits, sizeof(circuit_circuit) * library->numCircuits);
+    library->circuits[library->numCircuits - 1] = circuit_init();
+
+    return &library->circuits[library->numCircuits - 1];
+}
+
+circuit_circuit* get_current_circuit(circuit_library* library) {
+    return &library->circuits[library->currentCircuitID];
 }

@@ -1,0 +1,45 @@
+{
+	"name":	"main",
+	"shortname":	"main",
+	"description":	"main",
+	"author":	"AUTHOR",
+	"version":	"0.0.1",
+	"component_type":	"DETERMINISTIC",
+	"hash":	"HASH WILL GO HERE",
+	"inputs":	[{
+			"name":	"IN",
+			"subcomponent_id":	5,
+			"position":	{
+				"x":	830,
+				"y":	838
+			}
+		}],
+	"outputs":	[{
+			"name":	"OUT",
+			"subcomponent_id":	6,
+			"position":	{
+				"x":	2121,
+				"y":	956
+			},
+			"inputs":	[{
+					"input_index":	0,
+					"subcomponent_id":	4,
+					"node_index":	0,
+					"bit_depth":	1
+				}]
+		}],
+	"subcomponents":	[{
+			"name":	"e",
+			"subcomponent_id":	4,
+			"position":	{
+				"x":	1409,
+				"y":	880
+			},
+			"inputs":	[{
+					"input_index":	0,
+					"subcomponent_id":	5,
+					"node_index":	0,
+					"bit_depth":	1
+				}]
+		}]
+}
