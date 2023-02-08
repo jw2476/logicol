@@ -12,8 +12,8 @@ int main(void) {
 
     i32 width = GetScreenWidth();
     i32 height = GetScreenHeight();
-    InitWindow(640, 480, "raylib [core] example - basic window");
-//    ToggleFullscreen();
+    InitWindow(width, height, "raylib [core] example - basic window");
+    ToggleFullscreen();
 
     SetTargetFPS(60);
 
