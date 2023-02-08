@@ -60,7 +60,7 @@ void circuit_destroy(circuit_circuit* circuit);
 
 circuit_component* circuit_add_component(circuit_circuit* circuit, circuit_component_type type, Vector2 pos);
 circuit_component* circuit_add_custom_component(circuit_circuit* circuit, u32 innerID, circuit_library* library, Vector2 pos);
-void circuit_connect(circuit_circuit* circuit, circuit_component* from, u32 inputID, circuit_component* to, u32 outputID);
+void circuit_connect(circuit_circuit* circuit, circuit_component* from, u32 inputID, u32 toID, u32 outputID);
 
 Vector2 get_input_position(circuit_component* component, u32 inputID);
 Vector2 get_output_position(circuit_component* component, u32 outputID);

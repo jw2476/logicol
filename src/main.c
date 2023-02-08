@@ -12,8 +12,8 @@ int main(void) {
 
     i32 width = GetScreenWidth();
     i32 height = GetScreenHeight();
-    InitWindow(width, height, "raylib [core] example - basic window");
-    ToggleFullscreen();
+    InitWindow(640, 480, "raylib [core] example - basic window");
+//    ToggleFullscreen();
 
     SetTargetFPS(60);
 
@@ -23,7 +23,7 @@ int main(void) {
     camera.zoom = 1.0F;
 
     circuit_library library = circuit_library_init();
-    load_circuit(&library.circuits[0], "../output/awe-not.circuit");
+    load_circuit(&library, "awe-not");
 
     circuit_connection connecting;
     CLEAR(connecting);
@@ -60,7 +60,7 @@ int main(void) {
             for (u64 i = 0; i < get_current_circuit(&library)->numComponents; i++) {
                 for (u64 j = 0; j < get_current_circuit(&library)->components[i].numInputs; j++) {
                     if (Vector2Distance(cursorPos, Vector2Add(get_input_position(&get_current_circuit(&library)->components[i], j), (Vector2){ -100, 0})) < 32.0F) {
-                        circuit_connect(get_current_circuit(&library), &get_current_circuit(&library)->components[i], j, circuit_get_component(get_current_circuit(&library), connecting.componentID), connecting.outputID);
+                        circuit_connect(get_current_circuit(&library), &get_current_circuit(&library)->components[i], j, connecting.componentID, connecting.outputID);
                         break;
                     }
                 }
@@ -189,6 +189,12 @@ int main(void) {
             memset(inputBuffer, 0, sizeof(char) * 100);
         }
 
+        // New
+        if (IsKeyDown(KEY_LEFT_ALT) && IsKeyPressed(KEY_N)) {
+            circuit_library_create_circuit(&library);
+            library.currentCircuitID = library.numCircuits - 1;
+        }
+
         if (openMode && IsKeyPressed(KEY_ENTER)) {
             // Check if component is already in library
             bool found = false;
@@ -205,9 +211,7 @@ int main(void) {
                 circuit_library_create_circuit(&library);
                 library.currentCircuitID = library.numCircuits - 1;
 
-                char buffer[100];
-                sprintf(buffer, "../output/%s.circuit", inputBuffer);
-                load_circuit(get_current_circuit(&library), buffer); // Load circuit into new slot
+                load_circuit(&library, inputBuffer); // Load circuit into new slot
             }
 
             openMode = false;

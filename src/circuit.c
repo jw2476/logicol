@@ -109,8 +109,8 @@ circuit_component* circuit_add_custom_component(circuit_circuit* circuit, u32 in
     return component;
 }
 
-void circuit_connect(circuit_circuit* circuit, circuit_component* from, u32 inputID, circuit_component* to, u32 outputID) {
-    from->inputs[inputID].componentID = to->id;
+void circuit_connect(circuit_circuit* circuit, circuit_component* from, u32 inputID, u32 toID, u32 outputID) {
+    from->inputs[inputID].componentID = toID;
     from->inputs[inputID].outputID = outputID;
 }
 
@@ -146,6 +146,8 @@ circuit_component* circuit_get_component(circuit_circuit* circuit, u64 id) {
             return &circuit->components[i];
         }
     }
+
+    CRITICAL("Couldn't find component with ID: %d in %s", id, circuit->name);
 }
 
 circuit_library circuit_library_init() {
