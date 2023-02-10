@@ -6,14 +6,15 @@
 #include "rlgl.h"
 #include "simulate.h"
 #include "fs.h"
+#include "log.h"
 
 int main(void) {
     init();
 
     i32 width = GetScreenWidth();
     i32 height = GetScreenHeight();
-    InitWindow(width, height, "raylib [core] example - basic window");
-    ToggleFullscreen();
+    InitWindow(640, 480, "raylib [core] example - basic window");
+//    ToggleFullscreen();
 
     SetTargetFPS(60);
 
@@ -36,8 +37,6 @@ int main(void) {
     u32 inputPtr = 0;
     char inputBuffer[100];
     memset(inputBuffer, 0, sizeof(char) * 100);
-
-    double lastSaved = 0;
 
     while (!WindowShouldClose())
     {
@@ -168,7 +167,6 @@ int main(void) {
                 char buffer[100];
                 sprintf(buffer, "../output/%s.circuit", get_current_circuit(&library)->name);
                 save_circuit(get_current_circuit(&library), buffer);
-                lastSaved = GetTime();
             }
         }
 
@@ -178,7 +176,6 @@ int main(void) {
             char buffer[100];
             sprintf(buffer, "../output/%s.circuit", get_current_circuit(&library)->name);
             save_circuit(get_current_circuit(&library), buffer);
-            lastSaved = GetTime();
             saveMode = false;
         }
 
@@ -271,12 +268,7 @@ int main(void) {
                 sprintf(textBuffer, "Editing: %s\n", get_current_circuit(&library)->name);
             }
 
-            if ((GetTime() - lastSaved ) < 3) {
-                char buffer[100];
-                memset(buffer, 0, 100);
-                sprintf(buffer, "Saved as: %s.circuit", get_current_circuit(&library)->name);
-                strcat(textBuffer, buffer);
-            }
+            show_messages();
 
             DrawText(textBuffer, 32, 32, 48, BLUE);
         }

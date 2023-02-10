@@ -184,5 +184,7 @@ i64 load_circuit(circuit_library* library, const char* n) {
         decode_connections(get_current_circuit(library), subcomponent);
     }
 
+    INFO("Loaded: %s", name);
+
     return circuitID;
 }
