@@ -5,14 +5,10 @@ void circuit_component_destroy(circuit_component *component) {
     free(component->inputs);
 }
 
-circuit_circuit circuit_init() {
-    circuit_circuit circuit;
-    CLEAR(circuit);
-
-    circuit.components = malloc(0);
-    circuit.nextID = 1;
-
-    return circuit;
+void circuit_init(circuit_circuit* circuit) {
+    CLEAR(*circuit);
+    circuit->components = malloc(0);
+    circuit->nextID = 1;
 }
 
 void circuit_destroy(circuit_circuit *circuit) {
@@ -22,7 +18,7 @@ void circuit_destroy(circuit_circuit *circuit) {
     free(circuit->components);
 }
 
-circuit_component *circuit_add_component(circuit_circuit *circuit, circuit_component_type type, Vector2 pos) {
+circuit_component* circuit_add_component(circuit_circuit *circuit, circuit_component_type type, Vector2 pos) {
     circuit->numComponents++;
     circuit->components = realloc(circuit->components, sizeof(circuit_component) * circuit->numComponents);
     circuit_component *component = &circuit->components[circuit->numComponents - 1];
@@ -92,20 +88,19 @@ circuit_component *circuit_add_component(circuit_circuit *circuit, circuit_compo
     return component;
 }
 
-circuit_component *
-circuit_add_custom_component(circuit_circuit *circuit, u32 innerID, circuit_library *library, Vector2 pos) {
+circuit_component* circuit_add_custom_component(circuit_circuit *circuit, circuit_circuit* inner, Vector2 pos) {
     circuit->numComponents++;
     circuit->components = realloc(circuit->components, sizeof(circuit_component) * circuit->numComponents);
     circuit_component *component = &circuit->components[circuit->numComponents - 1];
     CLEAR(*component);
     component->id = circuit->nextID++;
     component->type = CUSTOM;
-    component->name = library->circuits[innerID].name;
+    component->name = inner->name;
 
-    for (u64 i = 0; i < library->circuits[innerID].numComponents; i++) {
-        if (library->circuits[innerID].components[i].type == INPUT) {
+    for (u64 i = 0; i < inner->numComponents; i++) {
+        if (inner->components[i].type == INPUT) {
             component->numInputs++;
-        } else if (library->circuits[innerID].components[i].type == OUTPUT) {
+        } else if (inner->components[i].type == OUTPUT) {
             component->numOutputs++;
         }
     }
@@ -114,14 +109,14 @@ circuit_add_custom_component(circuit_circuit *circuit, u32 innerID, circuit_libr
     memset(component->inputs, 0, sizeof(circuit_connection) * component->numInputs);
 
     component->pos = pos;
-    component->innerID = innerID;
+    component->inner = inner;
 
     return component;
 }
 
-void circuit_connect(circuit_circuit *circuit, circuit_component *from, u32 inputID, u32 toID, u32 outputID) {
-    from->inputs[inputID].componentID = toID;
-    from->inputs[inputID].outputID = outputID;
+void circuit_connect(circuit_circuit *circuit, circuit_component *from, u32 input, u64 to, u32 output) {
+    from->inputs[input].componentID = to;
+    from->inputs[input].output = output;
 }
 
 Vector2 get_input_position(circuit_component *component, u32 inputID) {
@@ -160,8 +155,7 @@ circuit_component *circuit_get_component(circuit_circuit *circuit, u64 id) {
     CRITICAL("Couldn't find component with ID: %lu in %s", id, circuit->name);
 }
 
-void circuit_embed_custom_components(circuit_library* library, u32 id) {
-    circuit_circuit *circuit = &library->circuits[id];
+void circuit_embed_custom_components(circuit_library* library, circuit_circuit* circuit) {
     for (u64 i = 0; i < circuit->numComponents; i++) {
         if (circuit->components[i].type != CUSTOM) continue;
 
@@ -180,7 +174,7 @@ void circuit_embed_custom_components(circuit_library* library, u32 id) {
             }
         }
 
-        circuit_circuit *child = &library->circuits[circuit->components[i].innerID];
+        circuit_circuit *child = circuit->components[i].inner;
         u64 baseID = circuit->nextID - 1;
         u64* customComponentInputIDs = malloc(sizeof(u64) * circuit->components[i].numInputs);
         memset(customComponentInputIDs, 0, sizeof(u64) * circuit->components[i].numInputs);
@@ -202,7 +196,7 @@ void circuit_embed_custom_components(circuit_library* library, u32 id) {
             if (child->components[j].type == OUTPUT) {
                 circuit_component* to = circuit_get_component(circuit, outputIDs[numOutputsMoved]);
                 to->inputs[outputInputIndexes[numOutputsMoved]].componentID = baseID + child->components[j].inputs[0].componentID;
-                to->inputs[outputInputIndexes[numOutputsMoved]].outputID = child->components[j].inputs[0].outputID;
+                to->inputs[outputInputIndexes[numOutputsMoved]].output = child->components[j].inputs[0].output;
                 numOutputsMoved++;
                 continue;
             }
@@ -211,7 +205,7 @@ void circuit_embed_custom_components(circuit_library* library, u32 id) {
                 component = circuit_add_component(circuit, child->components[j].type,
                                       circuit->components[i].pos);
             } else {
-                component = circuit_add_custom_component(circuit, child->components[j].innerID, library, circuit->components[i].pos);
+                component = circuit_add_custom_component(circuit, child->components[j].inner, circuit->components[i].pos);
             }
 
 
@@ -229,13 +223,11 @@ void circuit_embed_custom_components(circuit_library* library, u32 id) {
                     circuit_connect(circuit, component, k, circuit->components[i].inputs[nthInput].componentID, 0);
                 } else {
                     circuit_connect(circuit, component, k, child->components[j].inputs[k].componentID + baseID,
-                                    child->components[j].inputs[k].outputID);
+                                    child->components[j].inputs[k].output);
                 }
             }
         }
     }
-
-    complete = true;
 }
 
 void circuit_nandify_reconnect(circuit_circuit *circuit, u64 oldID, u64 newID) {
@@ -248,9 +240,7 @@ void circuit_nandify_reconnect(circuit_circuit *circuit, u64 oldID, u64 newID) {
     }
 }
 
-void circuit_nandify(circuit_library *library, u32 id) {
-    circuit_circuit *circuit = &library->circuits[id];
-
+void circuit_nandify(circuit_library *library, circuit_circuit* circuit) {
     u64 numComponents = circuit->numComponents;
     for (u64 i = 0; i < numComponents; i++) {
         switch (circuit->components[i].type) {
@@ -271,15 +261,15 @@ void circuit_nandify(circuit_library *library, u32 id) {
 
                 circuit_component *c1 = circuit_add_component(circuit, NAND, circuit->components[i].pos);
                 circuit_connect(circuit, c1, 0, circuit->components[i].inputs[0].componentID,
-                                circuit->components[i].inputs[0].outputID);
+                                circuit->components[i].inputs[0].output);
                 circuit_connect(circuit, c1, 1, circuit->components[i].inputs[0].componentID,
-                                circuit->components[i].inputs[0].outputID);
+                                circuit->components[i].inputs[0].output);
 
                 circuit_component *c2 = circuit_add_component(circuit, NAND, circuit->components[i].pos);
                 circuit_connect(circuit, c2, 0, circuit->components[i].inputs[1].componentID,
-                                circuit->components[i].inputs[1].outputID);
+                                circuit->components[i].inputs[1].output);
                 circuit_connect(circuit, c2, 1, circuit->components[i].inputs[1].componentID,
-                                circuit->components[i].inputs[1].outputID);
+                                circuit->components[i].inputs[1].output);
 
                 circuit_connect(circuit, &circuit->components[i], 0, c1->id, 0);
                 circuit_connect(circuit, &circuit->components[i], 1, c2->id, 0);
@@ -293,7 +283,7 @@ void circuit_nandify(circuit_library *library, u32 id) {
                 CLEAR(circuit->components[i].inputs[1]);
 
                 circuit_connect(circuit, &circuit->components[i], 1, circuit->components[i].inputs[0].componentID,
-                                circuit->components[i].inputs[0].outputID);
+                                circuit->components[i].inputs[0].output);
 
                 break;
             case NAND:
@@ -302,7 +292,7 @@ void circuit_nandify(circuit_library *library, u32 id) {
             case BUFFER:
             case CUSTOM:
                 circuit_nandify(library,
-                                circuit->components[i].innerID); // TODO: This wont be nessesary once custom component embedding is done
+                                circuit->components[i].inner); // TODO: This wont be nessesary once custom component embedding is done
                 break;
         }
     }
@@ -312,21 +302,18 @@ circuit_library circuit_library_init() {
     circuit_library library;
     CLEAR(library);
 
-    library.numCircuits = 1;
-    library.circuits = malloc(sizeof(circuit_circuit));
-    library.circuits[0] = circuit_init();
+    circuit_circuit* circuit = malloc(sizeof(circuit_circuit));
+    circuit_init(circuit);
+    library.circuits = list_new(circuit);
+    library.current = circuit;
 
     return library;
 }
 
 circuit_circuit *circuit_library_create_circuit(circuit_library *library) {
-    library->numCircuits++;
-    library->circuits = realloc(library->circuits, sizeof(circuit_circuit) * library->numCircuits);
-    library->circuits[library->numCircuits - 1] = circuit_init();
+    circuit_circuit* circuit = malloc(sizeof(circuit_circuit));
+    circuit_init(circuit);
+    list_append(library->circuits, circuit);
 
-    return &library->circuits[library->numCircuits - 1];
-}
-
-circuit_circuit *get_current_circuit(circuit_library *library) {
-    return &library->circuits[library->currentCircuitID];
+    return circuit;
 }

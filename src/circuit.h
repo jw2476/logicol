@@ -18,7 +18,7 @@ typedef enum wire_direction_t {
 
 typedef struct circuit_connection_t {
     u64 componentID;
-    u32 outputID;
+    u32 output;
     bool on;
 } circuit_connection;
 
@@ -40,12 +40,11 @@ typedef struct circuit_component_t {
 
     u32 numInputs;
     circuit_connection* inputs;
-
     u32 numOutputs;
 
     Vector2 pos;
 
-    u32 innerID; // Used for custom components
+    circuit_circuit* inner; // Used for custom components
     bool internallyActive; // Used to show if inputs or outputs are on
 } circuit_component;
 
@@ -58,12 +57,12 @@ typedef struct circuit_circuit_t {
     u32 nextID;
 } circuit_circuit;
 
-circuit_circuit circuit_init();
+void circuit_init(circuit_circuit* circuit);
 void circuit_destroy(circuit_circuit* circuit);
 
 circuit_component* circuit_add_component(circuit_circuit* circuit, circuit_component_type type, Vector2 pos);
-circuit_component* circuit_add_custom_component(circuit_circuit* circuit, u32 innerID, circuit_library* library, Vector2 pos);
-void circuit_connect(circuit_circuit* circuit, circuit_component* from, u32 inputID, u32 toID, u32 outputID);
+circuit_component* circuit_add_custom_component(circuit_circuit *circuit, circuit_circuit* inner, Vector2 pos);
+void circuit_connect(circuit_circuit *circuit, circuit_component *from, u32 input, u64 to, u32 output);
 
 Vector2 get_input_position(circuit_component* component, u32 inputID);
 Vector2 get_output_position(circuit_component* component, u32 outputID);
@@ -71,16 +70,13 @@ Vector2 get_output_position(circuit_component* component, u32 outputID);
 circuit_component* circuit_get_component(circuit_circuit* circuit, u64 id);
 
 // Optimization
-void circuit_embed_custom_components(circuit_library* library, u32 id);
-void circuit_nandify(circuit_library* library, u32 id);
+void circuit_embed_custom_components(circuit_library* library, circuit_circuit* circuit);
+void circuit_nandify(circuit_library *library, circuit_circuit* circuit);
 
 typedef struct circuit_library_t {
-    u32 numCircuits;
-    circuit_circuit* circuits;
-
-    u32 currentCircuitID;
+    list* circuits;
+    circuit_circuit* current;
 } circuit_library;
 
 circuit_library circuit_library_init();
 circuit_circuit* circuit_library_create_circuit(circuit_library* library);
-circuit_circuit* get_current_circuit(circuit_library* library);

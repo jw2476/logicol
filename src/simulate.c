@@ -1,6 +1,6 @@
 #include "simulate.h"
 
-bool is_true(circuit_circuit* circuit, circuit_component* component, u32 outputID, circuit_library* library) {
+bool is_true(circuit_circuit* circuit, circuit_component* component, u32 outputID) {
 
     for (u32 i = 0; i < component->numInputs; i++) {
         if (component->inputs[i].componentID == 0) {
@@ -10,7 +10,7 @@ bool is_true(circuit_circuit* circuit, circuit_component* component, u32 outputI
 
         if (component->type == BUFFER) continue;
 
-        component->inputs[i].on = is_true(circuit, circuit_get_component(circuit, component->inputs[i].componentID), component->inputs[i].outputID, library);
+        component->inputs[i].on = is_true(circuit, circuit_get_component(circuit, component->inputs[i].componentID), component->inputs[i].output);
     }
 
     switch (component->type) {
@@ -33,19 +33,19 @@ bool is_true(circuit_circuit* circuit, circuit_component* component, u32 outputI
         }
         case CUSTOM: {
             u32 counter = 0;
-            for (u32 i = 0; i < library->circuits[component->innerID].numComponents; i++) {
-                if (library->circuits[component->innerID].components[i].type == INPUT) {
-                    library->circuits[component->innerID].components[i].internallyActive = component->inputs[counter++].on;
+            for (u32 i = 0; i < component->inner->numComponents; i++) {
+                if (component->inner->components[i].type == INPUT) {
+                    component->inner->components[i].internallyActive = component->inputs[counter++].on;
                 }
             }
 
-            simulate(&library->circuits[component->innerID], library);
+            simulate(component->inner);
 
             counter = 0;
-            for (u32 i = 0; i < library->circuits[component->innerID].numComponents; i++) {
-                if (library->circuits[component->innerID].components[i].type == OUTPUT) {
+            for (u32 i = 0; i < component->inner->numComponents; i++) {
+                if (component->inner->components[i].type == OUTPUT) {
                     if (counter == outputID) {
-                        return library->circuits[component->innerID].components[i].internallyActive;
+                        return component->inner->components[i].internallyActive;
                     }
                     counter++;
                 }
@@ -56,17 +56,17 @@ bool is_true(circuit_circuit* circuit, circuit_component* component, u32 outputI
     }
 }
 
-void test_output(circuit_circuit* circuit, circuit_component* component, circuit_library* library) {
+void test_output(circuit_circuit* circuit, circuit_component* component) {
     if (component->inputs[0].componentID == 0) return;
 
-    component->internallyActive = is_true(circuit, circuit_get_component(circuit, component->inputs[0].componentID), component->inputs[0].outputID, library);
+    component->internallyActive = is_true(circuit, circuit_get_component(circuit, component->inputs[0].componentID), component->inputs[0].output);
     component->inputs[0].on = component->internallyActive;
 }
 
-void simulate(circuit_circuit* circuit, circuit_library* library) {
+void simulate(circuit_circuit* circuit) {
     for (u64 i = 0; i < circuit->numComponents; i++) {
         if (circuit->components[i].type == OUTPUT) {
-            test_output(circuit, &circuit->components[i], library);
+            test_output(circuit, &circuit->components[i]);
         }
     }
 }

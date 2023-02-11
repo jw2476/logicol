@@ -8,6 +8,15 @@ list* list_new(void* data) {
     return output;
 }
 
+list* list_get(list* root, u32 index) {
+    list* item = root;
+    for (u32 i = 0; i < index; i++) {
+        item = item->next;
+    }
+
+    return item;
+}
+
 list* list_append(list* root, void* data) {
     list* item = root;
     while(item->next != NULL) {
@@ -25,10 +34,7 @@ list* list_insert(list* root, u32 index, void* data) {
         CRITICAL("Linked list implementation doesn't support changing the root node.");
     }
 
-    list* item = root;
-    for (u32 i = 0; i < (index - 1); i++) {
-        item = item->next;
-    }
+    list* item = list_get(root, index);
 
     list* output = list_new(data);
     output->next = item->next;
@@ -42,13 +48,12 @@ void list_remove(list* root, u32 index, void* data) {
         CRITICAL("Linked list implementation doesn't support changing the root node.");
     }
 
-    list* item = root;
-    for (u32 i = 0; i < (index - 1); i++) {
-        item = item->next;
-    }
+    list* item = list_get(root, index);
 
     list* toRemove = item->next;
     item->next = item->next->next;
+
+    free(toRemove->data);
     free(toRemove);
 }
 

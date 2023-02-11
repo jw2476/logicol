@@ -11,6 +11,7 @@ typedef struct list_t {
 } list;
 
 list* list_new(void* data);
+list* list_get(list* root, u32 index);
 list* list_append(list* root, void* data);
 list* list_insert(list* root, u32 index, void* data);
 void list_remove(list* root, u32 index, void* data);

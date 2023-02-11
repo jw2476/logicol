@@ -19,8 +19,8 @@ int main(void) {
 
     i32 width = GetScreenWidth();
     i32 height = GetScreenHeight();
-    InitWindow(640, 480, "raylib [core] example - basic window");
-//    ToggleFullscreen();
+    InitWindow(width, height, "raylib [core] example - basic window");
+    ToggleFullscreen();
 
     SetTargetFPS(60);
 
@@ -50,11 +50,11 @@ int main(void) {
 
         // Connections
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-            for (u64 i = 0; i < get_current_circuit(&library)->numComponents; i++) {
-                for (u64 j = 0; j < get_current_circuit(&library)->components[i].numOutputs; j++) {
-                    if (Vector2Distance(cursorPos, Vector2Add(get_output_position(&get_current_circuit(&library)->components[i], j), (Vector2){ 100, 0 })) < 32.0F) {
-                        connecting.componentID = get_current_circuit(&library)->components[i].id;
-                        connecting.outputID = j;
+            for (u64 i = 0; i < library.current->numComponents; i++) {
+                for (u64 j = 0; j < library.current->components[i].numOutputs; j++) {
+                    if (Vector2Distance(cursorPos, Vector2Add(get_output_position(&library.current->components[i], j), (Vector2){ 100, 0 })) < 32.0F) {
+                        connecting.componentID = library.current->components[i].id;
+                        connecting.output = j;
                         break;
                     }
                 }
@@ -62,10 +62,10 @@ int main(void) {
         }
 
         if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT) && (connecting.componentID != 0)) {
-            for (u64 i = 0; i < get_current_circuit(&library)->numComponents; i++) {
-                for (u64 j = 0; j < get_current_circuit(&library)->components[i].numInputs; j++) {
-                    if (Vector2Distance(cursorPos, Vector2Add(get_input_position(&get_current_circuit(&library)->components[i], j), (Vector2){ -100, 0})) < 32.0F) {
-                        circuit_connect(get_current_circuit(&library), &get_current_circuit(&library)->components[i], j, connecting.componentID, connecting.outputID);
+            for (u64 i = 0; i < library.current->numComponents; i++) {
+                for (u64 j = 0; j < library.current->components[i].numInputs; j++) {
+                    if (Vector2Distance(cursorPos, Vector2Add(get_input_position(&library.current->components[i], j), (Vector2){ -100, 0})) < 32.0F) {
+                        circuit_connect(library.current, &library.current->components[i], j, connecting.componentID, connecting.output);
                         break;
                     }
                 }
@@ -76,9 +76,9 @@ int main(void) {
 
         // Component Movement
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-            for (u64 i = 0; i < get_current_circuit(&library)->numComponents; i++) {
-                if (Vector2Distance(get_current_circuit(&library)->components[i].pos, cursorPos) < 32.0F) {
-                    moving = &get_current_circuit(&library)->components[i];
+            for (u64 i = 0; i < library.current->numComponents; i++) {
+                if (Vector2Distance(library.current->components[i].pos, cursorPos) < 32.0F) {
+                    moving = &library.current->components[i];
                 }
             }
         }
@@ -113,9 +113,9 @@ int main(void) {
         }
 
         if (insertMode && IsKeyPressed(KEY_ENTER)) {
-            for (u32 i = 0; i < library.numCircuits; i++) {
-                if (strcmp(library.circuits[i].name, inputBuffer) == 0) {
-                    circuit_add_custom_component(get_current_circuit(&library), i, &library, cursorPos);
+            for (list* circuit = library.circuits; circuit != NULL; circuit = circuit->next) {
+                if (strcmp(((circuit_circuit*)circuit->data)->name, inputBuffer) == 0) {
+                    circuit_add_custom_component(library.current, circuit->data, cursorPos);
                 }
             }
 
@@ -125,43 +125,43 @@ int main(void) {
         if (IsKeyDown(KEY_LEFT_CONTROL)) {
             if (IsKeyDown(KEY_LEFT_SHIFT)) {
                 if (IsKeyPressed(KEY_I)) {
-                    circuit_add_component(get_current_circuit(&library), INPUT, cursorPos);
+                    circuit_add_component(library.current, INPUT, cursorPos);
                 }
 
                 if (IsKeyPressed(KEY_O)) {
-                    circuit_add_component(get_current_circuit(&library), OUTPUT, cursorPos);
+                    circuit_add_component(library.current, OUTPUT, cursorPos);
                 }
 
                 if (IsKeyPressed(KEY_A)) {
-                    circuit_add_component(get_current_circuit(&library), NAND, cursorPos);
+                    circuit_add_component(library.current, NAND, cursorPos);
                 }
             } else {
                 if (IsKeyPressed(KEY_A)) {
-                    circuit_add_component(get_current_circuit(&library), AND, cursorPos);
+                    circuit_add_component(library.current, AND, cursorPos);
                 }
 
                 if (IsKeyPressed(KEY_O)) {
-                    circuit_add_component(get_current_circuit(&library), OR, cursorPos);
+                    circuit_add_component(library.current, OR, cursorPos);
                 }
 
                 if (IsKeyPressed(KEY_N)) {
-                    circuit_add_component(get_current_circuit(&library), NOT, cursorPos);
+                    circuit_add_component(library.current, NOT, cursorPos);
                 }
 
                 if (IsKeyPressed(KEY_B)) {
-                    circuit_add_component(get_current_circuit(&library), BUFFER, cursorPos);
+                    circuit_add_component(library.current, BUFFER, cursorPos);
                 }
             }
         }
 
         // Optimization Keybinds
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyDown(KEY_LEFT_SHIFT) && IsKeyPressed(KEY_E)) {
-            circuit_embed_custom_components(&library, library.currentCircuitID);
+            circuit_embed_custom_components(&library, library.current);
             INFO("Embedded custom components. DO NOT SAVE");
         }
 
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyDown(KEY_LEFT_SHIFT) && IsKeyPressed(KEY_N)) {
-            circuit_nandify(&library, library.currentCircuitID);
+            circuit_nandify(&library, library.current);
             INFO("Nandified all in-memory circuits. DO NOT SAVE");
         }
 
@@ -177,16 +177,16 @@ int main(void) {
 
         // Input Toggling
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-            for (u64 i = 0; i < get_current_circuit(&library)->numComponents; i++) {
-                if (Vector2Distance(get_current_circuit(&library)->components[i].pos, cursorPos) < 32.0F) {
-                    if (get_current_circuit(&library)->components[i].type == INPUT) {
-                        get_current_circuit(&library)->components[i].internallyActive = !get_current_circuit(&library)->components[i].internallyActive;
+            for (u64 i = 0; i < library.current->numComponents; i++) {
+                if (Vector2Distance(library.current->components[i].pos, cursorPos) < 32.0F) {
+                    if (library.current->components[i].type == INPUT) {
+                        library.current->components[i].internallyActive = !library.current->components[i].internallyActive;
                     }
                 }
             }
         }
 
-        bool hasName = strlen(get_current_circuit(&library)->name) != 0;
+        bool hasName = strlen(library.current->name) != 0;
         if (IsKeyDown(KEY_LEFT_ALT) && IsKeyPressed(KEY_S)) {
             if (!hasName || IsKeyDown(KEY_LEFT_SHIFT)) {
                 saveMode = true;
@@ -194,17 +194,17 @@ int main(void) {
                 memset(inputBuffer, 0, sizeof(char) * 100);
             } else {
                 char buffer[100];
-                sprintf(buffer, "../output/%s.circuit", get_current_circuit(&library)->name);
-                save_circuit(get_current_circuit(&library), buffer);
+                sprintf(buffer, "../output/%s.circuit", library.current->name);
+                save_circuit(library.current, buffer);
             }
         }
 
         if (saveMode && IsKeyPressed(KEY_ENTER)) {
-            memcpy(get_current_circuit(&library)->name, inputBuffer, inputPtr + 1); // Rename component
+            memcpy(library.current->name, inputBuffer, inputPtr + 1); // Rename component
 
             char buffer[100];
-            sprintf(buffer, "../output/%s.circuit", get_current_circuit(&library)->name);
-            save_circuit(get_current_circuit(&library), buffer);
+            sprintf(buffer, "../output/%s.circuit", library.current->name);
+            save_circuit(library.current, buffer);
             saveMode = false;
         }
 
@@ -217,25 +217,22 @@ int main(void) {
 
         // New
         if (IsKeyDown(KEY_LEFT_ALT) && IsKeyPressed(KEY_N)) {
-            circuit_library_create_circuit(&library);
-            library.currentCircuitID = library.numCircuits - 1;
+            library.current = circuit_library_create_circuit(&library);
         }
 
         if (openMode && IsKeyPressed(KEY_ENTER)) {
             // Check if component is already in library
             bool found = false;
-            for (u32 i = 0; i < library.numCircuits; i++) {
-                if (strcmp(inputBuffer, library.circuits[i].name) == 0) {
-                    library.currentCircuitID = i;
+            for (list* item = library.circuits; item != NULL; item = item->next) {
+                circuit_circuit* circuit = (circuit_circuit*)item->data;
+                if (strcmp(inputBuffer, circuit->name) == 0) {
+                    library.current = circuit;
                     found = true;
                 }
             }
 
             if (!found) {
-                // TODO: Check if file exists
-
-                circuit_library_create_circuit(&library);
-                library.currentCircuitID = library.numCircuits - 1;
+                library.current = circuit_library_create_circuit(&library);
 
                 load_circuit(&library, inputBuffer); // Load circuit into new slot
             }
@@ -256,7 +253,7 @@ int main(void) {
 
         if (IsKeyPressed(KEY_RIGHT)) {
             simulationState = SIMULATION_STATE_STEPPING;
-            simulate(get_current_circuit(&library), &library);
+            simulate(library.current);
             INFO("Ticked");
         }
 
@@ -267,7 +264,7 @@ int main(void) {
         if (simulationState == SIMULATION_STATE_RUNNING) {
             while (GetTime() < nextFrame) {
                 for (u32 j = 0; j < 99; j++) {
-                    simulate(get_current_circuit(&library), &library);
+                    simulate(library.current);
                     ticks++;
                 }
             }
@@ -289,10 +286,10 @@ int main(void) {
                 DrawText(buffer, (int)cursorPos.x + 32, (int)cursorPos.y + 32, (int)(24 / camera.zoom), GREEN);
             }
 
-            draw_circuit(get_current_circuit(&library));
+            draw_circuit(library.current);
 
             if (connecting.componentID != 0) {
-                DrawLineBezier(Vector2Add(get_output_position(circuit_get_component(get_current_circuit(&library), connecting.componentID), connecting.outputID), (Vector2){ 100, 0 }), cursorPos, 8.0F, CONNECTION);
+                DrawLineBezier(Vector2Add(get_output_position(circuit_get_component(library.current, connecting.componentID), connecting.output), (Vector2){ 100, 0 }), cursorPos, 8.0F, CONNECTION);
             }
         }
         EndMode2D();
@@ -313,7 +310,7 @@ int main(void) {
             }
 
             if (!insertMode && !saveMode && !openMode) {
-                sprintf(textBuffer, "Editing: %s\n", get_current_circuit(&library)->name);
+                sprintf(textBuffer, "Editing: %s\n", library.current->name);
             }
 
             show_messages();

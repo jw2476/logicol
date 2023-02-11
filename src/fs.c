@@ -21,7 +21,7 @@ cJSON* encode_component(circuit_circuit* circuit, circuit_component* component) 
             cJSON* input = cJSON_CreateObject();
             cJSON_AddNumberToObject(input, "input_index", (double)i);
             cJSON_AddNumberToObject(input, "subcomponent_id", (double)component->inputs[i].componentID);
-            cJSON_AddNumberToObject(input, "node_index", (double)component->inputs[i].outputID);
+            cJSON_AddNumberToObject(input, "node_index", (double)component->inputs[i].output);
             cJSON_AddNumberToObject(input, "bit_depth", 1);
             cJSON_AddItemToArray(inputs, input);
         }
@@ -37,32 +37,32 @@ circuit_component* decode_component(circuit_library* library, cJSON* data) {
     circuit_component* component;
 
     if (strcmp(name, "AND") == 0 ) {
-        component = circuit_add_component(get_current_circuit(library), AND, pos);
+        component = circuit_add_component(library->current, AND, pos);
     } else if (strcmp(name, "OR") == 0) {
-        component = circuit_add_component(get_current_circuit(library), OR, pos);
+        component = circuit_add_component(library->current, OR, pos);
     } else if (strcmp(name, "NOT") == 0) {
-        component = circuit_add_component(get_current_circuit(library), NOT, pos);
+        component = circuit_add_component(library->current, NOT, pos);
     } else if (strcmp(name, "IN") == 0) {
-        component = circuit_add_component(get_current_circuit(library), INPUT, pos);
+        component = circuit_add_component(library->current, INPUT, pos);
     } else if (strcmp(name, "OUT") == 0) {
-        component = circuit_add_component(get_current_circuit(library), OUTPUT, pos);
+        component = circuit_add_component(library->current, OUTPUT, pos);
     } else {
-        i64 circuitID = -1;
+        circuit_circuit* inner = NULL;
 
-
-        for (u32 i = 0; i < library->numCircuits; i++) {
-            if (strcmp(library->circuits[i].name, name) == 0) {
-                circuitID = i;
+        for (list* circuit = library->circuits; circuit != NULL; circuit = circuit->next) {
+            if (strcmp(((circuit_circuit*)circuit->data)->name, name) == 0) {
+                inner = circuit->data;
+                break;
             }
         }
 
-        if (circuitID == -1) {
-            u32 oldCurrentCircuitID = library->currentCircuitID;
-            circuitID = (u32)load_circuit(library, name);
-            library->currentCircuitID = oldCurrentCircuitID; // Restore currentCircuitID from before recursive call
+        if (inner == NULL) {
+            circuit_circuit* oldCurrentCircuit = library->current;
+            inner = load_circuit(library, name);
+            library->current = oldCurrentCircuit; // Restore currentCircuitID from before recursive call
         }
 
-        component = circuit_add_custom_component(get_current_circuit(library), circuitID, library, pos);
+        component = circuit_add_custom_component(library->current, inner, pos);
     }
 
     component->id = cJSON_GetObjectItemCaseSensitive(data, "subcomponent_id")->valueint;
@@ -128,14 +128,14 @@ void save_circuit(circuit_circuit* circuit, const char* path) {
     INFO("Saved to %s", path);
 }
 
-i64 load_circuit(circuit_library* library, const char* n) {
+circuit_circuit* load_circuit(circuit_library* library, const char* n) {
     char path[100];
     sprintf(path, "../output/%s.circuit", n);
 
     FILE* file = fopen(path, "r");
     if (file == NULL) {
         ERROR("Failed to open %s", path);
-        return -1;
+        return NULL;
     }
 
     fseek(file, 0, SEEK_END);
@@ -149,12 +149,10 @@ i64 load_circuit(circuit_library* library, const char* n) {
     cJSON* data = cJSON_Parse(string);
     free(string);
 
-    circuit_library_create_circuit(library);
-    u32 circuitID = library->numCircuits - 1;
-    library->currentCircuitID = circuitID;
+    library->current = circuit_library_create_circuit(library);
 
     const char* name = cJSON_GetObjectItemCaseSensitive(data, "name")->valuestring;
-    memcpy(get_current_circuit(library)->name, name, strlen(name));
+    memcpy(library->current->name, name, strlen(name));
 
     cJSON* inputs = cJSON_GetObjectItemCaseSensitive(data, "inputs");
     cJSON* outputs = cJSON_GetObjectItemCaseSensitive(data, "outputs");
@@ -175,16 +173,16 @@ i64 load_circuit(circuit_library* library, const char* n) {
     }
 
     cJSON_ArrayForEach(input, inputs) {
-        decode_connections(get_current_circuit(library), input);
+        decode_connections(library->current, input);
     }
     cJSON_ArrayForEach(output, outputs) {
-        decode_connections(get_current_circuit(library), output);
+        decode_connections(library->current, output);
     }
     cJSON_ArrayForEach(subcomponent, subcomponents) {
-        decode_connections(get_current_circuit(library), subcomponent);
+        decode_connections(library->current, subcomponent);
     }
 
     INFO("Loaded: %s", name);
 
-    return circuitID;
+    return library->current;
 }

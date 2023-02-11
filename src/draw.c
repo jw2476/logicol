@@ -179,7 +179,7 @@ void draw_circuit(circuit_circuit* circuit) {
         for (u32 j = 0; j < circuit->components[i].numInputs; j++) {
             if (circuit->components[i].inputs[j].componentID != 0 && circuit->components[i].numInputs) {
                 Vector2 from = Vector2Add(get_input_position(&circuit->components[i], j), (Vector2){ -100, 0 });
-                Vector2 to = Vector2Add(get_output_position(circuit_get_component(circuit, circuit->components[i].inputs[j].componentID), circuit->components[i].inputs[j].outputID), (Vector2){ 100, 0 });
+                Vector2 to = Vector2Add(get_output_position(circuit_get_component(circuit, circuit->components[i].inputs[j].componentID), circuit->components[i].inputs[j].output), (Vector2){ 100, 0 });
                 draw_connection(from, to, circuit->components[i].inputs[j].on);
             }
         }
