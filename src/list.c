@@ -17,7 +17,22 @@ list* list_get(list* root, u32 index) {
     return item;
 }
 
+list* list_find(list* root, void* data) {
+    for (list* item = root; item != NULL; item = item->next) {
+        if (item->data == data) {
+            return item;
+        }
+    }
+
+    return NULL;
+}
+
 list* list_append(list* root, void* data) {
+    if (root->data == NULL) {
+        root->data = data;
+        return root;
+    }
+
     list* item = root;
     while(item->next != NULL) {
         item = item->next;
@@ -43,7 +58,7 @@ list* list_insert(list* root, u32 index, void* data) {
     return output;
 }
 
-void list_remove(list* root, u32 index, void* data) {
+void list_remove(list* root, u32 index) {
     if (index == 0) {
         CRITICAL("Linked list implementation doesn't support changing the root node.");
     }
@@ -55,6 +70,21 @@ void list_remove(list* root, u32 index, void* data) {
 
     free(toRemove->data);
     free(toRemove);
+}
+
+void list_delete(list* root, void* data) {
+    list_remove(root, list_indexof(root, data));
+}
+
+u32 list_indexof(list* root, void* data) {
+    list* item = root;
+    u32 index = 0;
+    while (item != NULL && item->data != data) {
+        index++;
+        item = item->next
+    }
+
+    return index;
 }
 
 void list_traverse(list* root, list_traversal_func callback) {
