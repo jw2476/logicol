@@ -23,10 +23,12 @@ typedef struct circuit_connection_t {
 
 typedef enum circuit_component_type_t {
     AND = 0,
+    NAND,
     OR,
     NOT,
     INPUT,
     OUTPUT,
+    BUFFER,
     CUSTOM
 } circuit_component_type;
 
@@ -66,6 +68,7 @@ Vector2 get_input_position(circuit_component* component, u32 inputID);
 Vector2 get_output_position(circuit_component* component, u32 outputID);
 
 circuit_component* circuit_get_component(circuit_circuit* circuit, u64 id);
+void circuit_nandify(circuit_circuit* circuit);
 
 typedef struct circuit_library_t {
     u32 numCircuits;

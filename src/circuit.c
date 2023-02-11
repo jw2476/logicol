@@ -34,6 +34,9 @@ circuit_component* circuit_add_component(circuit_circuit* circuit, circuit_compo
         case AND:
             component->name = "AND";
             break;
+        case NAND:
+            component->name = "NAND";
+            break;
         case OR:
             component->name = "OR";
             break;
@@ -46,15 +49,20 @@ circuit_component* circuit_add_component(circuit_circuit* circuit, circuit_compo
         case OUTPUT:
             component->name = "OUT";
             break;
+        case BUFFER:
+            component->name = "BUF";
+            break;
     }
 
     switch (type) {
         case AND:
+        case NAND:
         case OR:
             component->numInputs = 2;
             break;
         case NOT:
         case OUTPUT:
+        case BUFFER:
             component->numInputs = 1;
             break;
         case INPUT:
@@ -64,9 +72,11 @@ circuit_component* circuit_add_component(circuit_circuit* circuit, circuit_compo
 
     switch (type) {
         case AND:
+        case NAND:
         case OR:
         case NOT:
         case INPUT:
+        case BUFFER:
             component->numOutputs = 1;
             break;
         case OUTPUT:
@@ -147,7 +157,68 @@ circuit_component* circuit_get_component(circuit_circuit* circuit, u64 id) {
         }
     }
 
-    CRITICAL("Couldn't find component with ID: %d in %s", id, circuit->name);
+    CRITICAL("Couldn't find component with ID: %lu in %s", id, circuit->name);
+}
+
+void circuit_nandify_reconnect(circuit_circuit* circuit, u64 oldID, u64 newID) {
+    for (u64 i = 0; i < circuit->numComponents; i++) {
+        for (u32 j = 0; j < circuit->components[i].numInputs; j++) {
+            if (circuit->components[i].inputs[j].componentID == oldID) {
+                circuit->components[i].inputs[j].componentID = newID;
+            }
+        }
+    }
+}
+
+void circuit_nandify(circuit_circuit* circuit) {
+    u64 numComponents = circuit->numComponents;
+    for (u64 i = 0; i < numComponents; i++) {
+        switch (circuit->components[i].type) {
+            case AND:
+                circuit->components[i].type = NAND;
+                circuit->components[i].name = "NAND";
+                circuit_component* component = circuit_add_component(circuit, NAND, circuit->components[i].pos);
+
+                circuit_nandify_reconnect(circuit, circuit->components[i].id, component->id);
+
+                circuit_connect(circuit, component, 0, circuit->components[i].id, 0);
+                circuit_connect(circuit, component, 1, circuit->components[i].id, 0);
+
+                break;
+            case OR:
+                circuit->components[i].type = NAND;
+                circuit->components[i].name = "NAND";
+
+                circuit_component* c1 = circuit_add_component(circuit, NAND, circuit->components[i].pos);
+                circuit_connect(circuit, c1, 0, circuit->components[i].inputs[0].componentID, circuit->components[i].inputs[0].outputID);
+                circuit_connect(circuit, c1, 1, circuit->components[i].inputs[0].componentID, circuit->components[i].inputs[0].outputID);
+
+                circuit_component* c2 = circuit_add_component(circuit, NAND, circuit->components[i].pos);
+                circuit_connect(circuit, c2, 0, circuit->components[i].inputs[1].componentID, circuit->components[i].inputs[1].outputID);
+                circuit_connect(circuit, c2, 1, circuit->components[i].inputs[1].componentID, circuit->components[i].inputs[1].outputID);
+
+                circuit_connect(circuit, &circuit->components[i], 0, c1->id, 0);
+                circuit_connect(circuit, &circuit->components[i], 1, c2->id, 0);
+
+                break;
+            case NOT:
+                circuit->components[i].type = NAND;
+                circuit->components[i].name = "NAND";
+                circuit->components[i].numInputs = 2;
+                circuit->components[i].inputs = realloc(circuit->components[i].inputs, sizeof(circuit_connection) * 2);
+                CLEAR(circuit->components[i].inputs[1]);
+
+                circuit_connect(circuit, &circuit->components[i], 1, circuit->components[i].inputs[0].componentID, circuit->components[i].inputs[0].outputID);
+
+                break;
+            case NAND:
+            case INPUT:
+            case OUTPUT:
+            case BUFFER:
+            case CUSTOM:
+                break;
+        }
+    }
 }
 
 circuit_library circuit_library_init() {

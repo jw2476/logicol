@@ -8,23 +8,27 @@
 #include "fs.h"
 #include "log.h"
 
+typedef enum simulation_state_t {
+    SIMULATION_STATE_OFF,
+    SIMULATION_STATE_STEPPING,
+    SIMULATION_STATE_RUNNING
+} simulation_state;
+
 int main(void) {
     init();
 
     i32 width = GetScreenWidth();
     i32 height = GetScreenHeight();
-    InitWindow(640, 480, "raylib [core] example - basic window");
-//    ToggleFullscreen();
+    InitWindow(width, height, "raylib [core] example - basic window");
+    ToggleFullscreen();
 
     SetTargetFPS(60);
 
     Camera2D camera;
     CLEAR(camera);
-
     camera.zoom = 1.0F;
 
     circuit_library library = circuit_library_init();
-    load_circuit(&library, "awe-not");
 
     circuit_connection connecting;
     CLEAR(connecting);
@@ -37,6 +41,8 @@ int main(void) {
     u32 inputPtr = 0;
     char inputBuffer[100];
     memset(inputBuffer, 0, sizeof(char) * 100);
+
+    simulation_state simulationState = SIMULATION_STATE_OFF;
 
     while (!WindowShouldClose())
     {
@@ -116,24 +122,41 @@ int main(void) {
             insertMode = false;
         }
 
-        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_A)) {
-            circuit_add_component(get_current_circuit(&library), AND, cursorPos);
+        if (IsKeyDown(KEY_LEFT_CONTROL)) {
+            if (IsKeyDown(KEY_LEFT_SHIFT)) {
+                if (IsKeyPressed(KEY_I)) {
+                    circuit_add_component(get_current_circuit(&library), INPUT, cursorPos);
+                }
+
+                if (IsKeyPressed(KEY_O)) {
+                    circuit_add_component(get_current_circuit(&library), OUTPUT, cursorPos);
+                }
+
+                if (IsKeyPressed(KEY_A)) {
+                    circuit_add_component(get_current_circuit(&library), NAND, cursorPos);
+                }
+            } else {
+                if (IsKeyPressed(KEY_A)) {
+                    circuit_add_component(get_current_circuit(&library), AND, cursorPos);
+                }
+
+                if (IsKeyPressed(KEY_O)) {
+                    circuit_add_component(get_current_circuit(&library), OR, cursorPos);
+                }
+
+                if (IsKeyPressed(KEY_N)) {
+                    circuit_add_component(get_current_circuit(&library), NOT, cursorPos);
+                }
+
+                if (IsKeyPressed(KEY_B)) {
+                    circuit_add_component(get_current_circuit(&library), BUFFER, cursorPos);
+                }
+            }
         }
 
-        if (IsKeyDown(KEY_LEFT_CONTROL) && !IsKeyDown(KEY_LEFT_SHIFT) && IsKeyPressed(KEY_O)) {
-            circuit_add_component(get_current_circuit(&library), OR, cursorPos);
-        }
-
-        if (IsKeyDown(KEY_LEFT_CONTROL) && !IsKeyDown(KEY_LEFT_SHIFT) && IsKeyPressed(KEY_N)) {
-            circuit_add_component(get_current_circuit(&library), NOT, cursorPos);
-        }
-
-        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyDown(KEY_LEFT_SHIFT) && IsKeyPressed(KEY_I)) {
-            circuit_add_component(get_current_circuit(&library), INPUT, cursorPos);
-        }
-
-        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyDown(KEY_LEFT_SHIFT) && IsKeyPressed(KEY_O)) {
-            circuit_add_component(get_current_circuit(&library), OUTPUT, cursorPos);
+        // Nandify
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyDown(KEY_LEFT_SHIFT) && IsKeyPressed(KEY_N)) {
+            circuit_nandify(get_current_circuit(&library));
         }
 
         // Zooming
@@ -214,14 +237,33 @@ int main(void) {
             openMode = false;
         }
 
+        // Simulation State
+        if (IsKeyPressed(KEY_SPACE)) {
+            if (simulationState == SIMULATION_STATE_RUNNING) {
+                simulationState = SIMULATION_STATE_OFF;
+                INFO("Paused");
+            } else {
+                simulationState = SIMULATION_STATE_RUNNING;
+                INFO("Running");
+            }
+        }
+
+        if (IsKeyPressed(KEY_RIGHT)) {
+            simulationState = SIMULATION_STATE_STEPPING;
+            simulate(get_current_circuit(&library), &library);
+            INFO("Ticked");
+        }
+
         // TPS Counter
         double now = GetTime();
         double nextFrame = now + 1 / 60.0f;
         u32 ticks = 0;
-        while (GetTime() < nextFrame) {
-            for (u32 j = 0; j < 1000; j++) {
-                simulate(get_current_circuit(&library), &library);
-                ticks++;
+        if (simulationState == SIMULATION_STATE_RUNNING) {
+            while (GetTime() < nextFrame) {
+                for (u32 j = 0; j < 99; j++) {
+                    simulate(get_current_circuit(&library), &library);
+                    ticks++;
+                }
             }
         }
 

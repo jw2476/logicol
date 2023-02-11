@@ -8,12 +8,16 @@ bool is_true(circuit_circuit* circuit, circuit_component* component, u32 outputI
             continue;
         }
 
+        if (component->type == BUFFER) continue;
+
         component->inputs[i].on = is_true(circuit, circuit_get_component(circuit, component->inputs[i].componentID), component->inputs[i].outputID, library);
     }
 
     switch (component->type) {
         case AND:
             return component->inputs[0].on && component-> inputs[1].on;
+        case NAND:
+            return !(component->inputs[0].on && component-> inputs[1].on);
         case OR:
             return component->inputs[0].on || component->inputs[1].on;
         case NOT:
@@ -23,6 +27,10 @@ bool is_true(circuit_circuit* circuit, circuit_component* component, u32 outputI
         case OUTPUT:
             // THIS IS IMPOSSIBLE
             break;
+        case BUFFER: {
+            WARN("Cannot yet simulate buffers");
+            return false;
+        }
         case CUSTOM: {
             u32 counter = 0;
             for (u32 i = 0; i < library->circuits[component->innerID].numComponents; i++) {
