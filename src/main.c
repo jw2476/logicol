@@ -19,8 +19,8 @@ int main(void) {
 
     i32 width = GetScreenWidth();
     i32 height = GetScreenHeight();
-    InitWindow(width, height, "raylib [core] example - basic window");
-    ToggleFullscreen();
+    InitWindow(640, 480, "raylib [core] example - basic window");
+//    ToggleFullscreen();
 
     SetTargetFPS(60);
 
@@ -154,9 +154,15 @@ int main(void) {
             }
         }
 
-        // Nandify
+        // Optimization Keybinds
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyDown(KEY_LEFT_SHIFT) && IsKeyPressed(KEY_E)) {
+            circuit_embed_custom_components(&library, library.currentCircuitID);
+            INFO("Embedded custom components. DO NOT SAVE");
+        }
+
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyDown(KEY_LEFT_SHIFT) && IsKeyPressed(KEY_N)) {
-            circuit_nandify(get_current_circuit(&library));
+            circuit_nandify(&library, library.currentCircuitID);
+            INFO("Nandified all in-memory circuits. DO NOT SAVE");
         }
 
         // Zooming

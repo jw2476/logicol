@@ -2,6 +2,7 @@
 
 #include "base.h"
 #include "raylib.h"
+#include "list.h"
 
 typedef enum wire_direction_t wire_direction;
 typedef struct circuit_connection_t circuit_connection;
@@ -68,7 +69,10 @@ Vector2 get_input_position(circuit_component* component, u32 inputID);
 Vector2 get_output_position(circuit_component* component, u32 outputID);
 
 circuit_component* circuit_get_component(circuit_circuit* circuit, u64 id);
-void circuit_nandify(circuit_circuit* circuit);
+
+// Optimization
+void circuit_embed_custom_components(circuit_library* library, u32 id);
+void circuit_nandify(circuit_library* library, u32 id);
 
 typedef struct circuit_library_t {
     u32 numCircuits;
