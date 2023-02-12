@@ -15,6 +15,7 @@ void graph_add_node(graph_graph* graph, void* data) {
 
     node->data = data;
     node->edges = graph_edge_list_new(NULL);
+    node->marked = false;
 
     graph_node_list_append(graph->nodes, node);
 }
@@ -59,4 +60,36 @@ void graph_delete(graph_graph* graph, void* data) {
             }
         }
     }
+}
+
+void graph_topological_sort_visit(graph_graph* graph, graph_node_list* sorted, graph_node* node) {
+    if (node->marked) return;
+
+    ITERATE(graph_edge_list, node->edges, edgeItem) {
+        if (edgeItem->data == NULL || edgeItem->data->node == NULL) continue;
+        graph_topological_sort_visit(graph, sorted, edgeItem->data->node);
+    }
+
+    node->marked = true;
+    graph_node_list_append(sorted, node);
+}
+
+graph_node_list* graph_topological_sort(graph_graph* graph) {
+    if (graph->nodes->data == NULL)  {
+        return graph_node_list_new(NULL);
+    }
+
+    ITERATE(graph_node_list, graph->nodes, nodeItem) {
+        nodeItem->data->marked = false;
+    }
+
+    graph_node_list* sorted = graph_node_list_new(NULL);
+
+    ITERATE(graph_node_list, graph->nodes, nodeItem) {
+        if (!nodeItem->data->marked) {
+            graph_topological_sort_visit(graph, sorted, nodeItem->data);
+        }
+    }
+
+    return graph_node_list_reverse(sorted);
 }

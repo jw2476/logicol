@@ -2,6 +2,8 @@
 
 #include "base.h"
 
+#define ITERATE(T, ROOT, NAME) for (T* NAME = ROOT; NAME != NULL; NAME = NAME->next)
+
 typedef struct list_t list;
 typedef void(*list_traversal_func)(void*);
 
@@ -20,6 +22,7 @@ void list_delete(list* root, void* data);
 u32 list_indexof(list* root, void* data);
 void list_traverse(list* root, list_traversal_func callback);
 u32 list_length(list* root);
+list* list_reverse(list* root);
 
 #define DEFINE_LIST(T, NAME)                                                           \
 typedef struct NAME ## _t NAME;                                                        \
@@ -37,4 +40,5 @@ static void(*NAME ## _remove)(NAME*, u32) = (void*)list_remove;                 
 static void(*NAME ## _delete)(NAME*, T*) = (void*)list_delete;                         \
 static u32(*NAME ## _indexof)(NAME*, T*) = (void*)list_indexof;                        \
 static void(*NAME ## _traverse)(NAME*, list_traversal_func) = (void*)list_traverse;    \
-static u32(*NAME ## _length)(NAME*) = (void*)list_length
+static u32(*NAME ## _length)(NAME*) = (void*)list_length;                               \
+static NAME*(*NAME ## _reverse)(NAME*) = (void*)list_reverse

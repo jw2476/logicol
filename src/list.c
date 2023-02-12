@@ -105,3 +105,15 @@ u32 list_length(list* root) {
 
     return length;
 }
+
+list* list_reverse(list* root) {
+    list* prev = NULL;
+    list* current = root;
+    while (current != NULL) {
+        list* next = current->next;
+        current->next = prev;
+        prev = current;
+        current = next;
+    }
+    return prev;
+}

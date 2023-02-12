@@ -64,9 +64,9 @@
 //}
 
 void simulate(circuit_circuit* circuit) {
-//    for (u64 i = 0; i < circuit->numComponents; i++) {
-//        if (circuit->components[i].type == OUTPUT) {
-//            test_output(circuit, &circuit->components[i]);
-//        }
-//    }
+    circuit_graph_node_list* sorted = circuit_graph_topological_sort(circuit->components);
+    ITERATE(circuit_graph_node_list, sorted, sortedItem) {
+        if (sorted->data == NULL) break;
+        INFO("%s", sortedItem->data->data->name);
+    }
 }

@@ -17,6 +17,7 @@ typedef struct graph_graph_t {
 typedef struct graph_node_t {
     void* data;
     graph_edge_list* edges;
+    bool marked;
 } graph_node;
 
 typedef struct graph_edge_t {
@@ -29,31 +30,34 @@ void graph_add_node(graph_graph* graph, void* data);
 void graph_connect(graph_graph* graph, void* from, void* to, void* data);
 graph_node* graph_find(graph_graph* graph, void* data);
 void graph_delete(graph_graph* graph, void* data);
+graph_node_list* graph_topological_sort(graph_graph* graph);
 
-#define DEFINE_GRAPH(N, E, NAME)                                                    \
-typedef struct NAME ## _graph_t NAME ## _graph;                                     \
-typedef struct NAME ## _node_t NAME ## _node;                                       \
-typedef struct NAME ## _edge_t NAME ## _edge;                                       \
-                                                                                    \
-DEFINE_LIST(NAME ## _node, NAME ## _node_list);                                     \
-DEFINE_LIST(NAME ## _edge, NAME ## _edge_list);                                     \
-                                                                                    \
-typedef struct NAME ## _graph_t {                                                   \
-    NAME ## _node_list* nodes;                                                      \
-} NAME ## _graph;                                                                   \
-                                                                                    \
-typedef struct NAME ## _node_t {                                                    \
-    N* data;                                                                        \
-    NAME ## _edge_list* edges;                                                      \
-} NAME ## _node;                                                                    \
-                                                                                    \
-typedef struct NAME ## _edge_t {                                                    \
-    E* data;                                                                        \
-    NAME ## _node* node;                                                            \
-} NAME ## _edge;                                                                    \
-                                                                                    \
-static NAME ## _graph*(*NAME ## _new)() = (void*)graph_new;                         \
-static void(*NAME ## _add_node)(NAME ## _graph*, N*) = (void*)graph_add_node;       \
-static void(*NAME ## _connect)(NAME ## _graph*, N*, N*, E*) = (void*)graph_connect; \
-static NAME ## _node*(*NAME ## _find)(NAME ## _graph*, N*) = (void*)graph_find;     \
-static void(*NAME ## _delete)(NAME ## _graph*, N*) = (void*)graph_delete
+#define DEFINE_GRAPH(N, E, NAME)                                                                         \
+typedef struct NAME ## _graph_t NAME ## _graph;                                                          \
+typedef struct NAME ## _node_t NAME ## _node;                                                            \
+typedef struct NAME ## _edge_t NAME ## _edge;                                                            \
+                                                                                                         \
+DEFINE_LIST(NAME ## _node, NAME ## _node_list);                                                          \
+DEFINE_LIST(NAME ## _edge, NAME ## _edge_list);                                                          \
+                                                                                                         \
+typedef struct NAME ## _graph_t {                                                                        \
+    NAME ## _node_list* nodes;                                                                           \
+} NAME ## _graph;                                                                                        \
+                                                                                                         \
+typedef struct NAME ## _node_t {                                                                         \
+    N* data;                                                                                             \
+    NAME ## _edge_list* edges;                                                                           \
+    bool marked;                                                                                         \
+} NAME ## _node;                                                                                         \
+                                                                                                         \
+typedef struct NAME ## _edge_t {                                                                         \
+    E* data;                                                                                             \
+    NAME ## _node* node;                                                                                 \
+} NAME ## _edge;                                                                                         \
+                                                                                                         \
+static NAME ## _graph*(*NAME ## _new)() = (void*)graph_new;                                              \
+static void(*NAME ## _add_node)(NAME ## _graph*, N*) = (void*)graph_add_node;                            \
+static void(*NAME ## _connect)(NAME ## _graph*, N*, N*, E*) = (void*)graph_connect;                      \
+static NAME ## _node*(*NAME ## _find)(NAME ## _graph*, N*) = (void*)graph_find;                          \
+static void(*NAME ## _delete)(NAME ## _graph*, N*) = (void*)graph_delete;                                \
+static NAME ## _node_list*(*NAME ## _topological_sort)(NAME ## _graph*) = (void*)graph_topological_sort;

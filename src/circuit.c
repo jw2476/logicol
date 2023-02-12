@@ -75,7 +75,7 @@ circuit_component* circuit_add_custom_component(circuit_circuit *circuit, circui
     component->type = CUSTOM;
     component->name = inner->name;
 
-    for (circuit_graph_node_list* nodeItem = circuit->components->nodes; nodeItem != NULL; nodeItem = nodeItem->next) {
+    ITERATE(circuit_graph_node_list, circuit->components->nodes, nodeItem) {
         circuit_component* innerComponent = nodeItem->data->data;
         if (innerComponent->type == INPUT) {
             circuit_graph_connect(circuit->components, component, NULL, NULL);

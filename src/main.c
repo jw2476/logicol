@@ -30,8 +30,8 @@ int main(void) {
 
     circuit_library library = circuit_library_init();
 
-    circuit_connection connecting;
-    CLEAR(connecting);
+    circuit_component* connectionComponent = NULL;
+    u32 connectionOutput = 0;
 
     circuit_component* moving = NULL;
 
@@ -49,30 +49,39 @@ int main(void) {
         Vector2 cursorPos = GetScreenToWorld2D(GetMousePosition(), camera);
 
         // Connections
-//        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-//            for (u64 i = 0; i < library.current->numComponents; i++) {
-//                for (u64 j = 0; j < library.current->components[i].numOutputs; j++) {
-//                    if (Vector2Distance(cursorPos, Vector2Add(get_output_position(&library.current->components[i], j), (Vector2){ 100, 0 })) < 32.0F) {
-//                        connecting.componentID = library.current->components[i].id;
-//                        connecting.output = j;
-//                        break;
-//                    }
-//                }
-//            }
-//        }
-//
-//        if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT) && (connecting.componentID != 0)) {
-//            for (u64 i = 0; i < library.current->numComponents; i++) {
-//                for (u64 j = 0; j < library.current->components[i].numInputs; j++) {
-//                    if (Vector2Distance(cursorPos, Vector2Add(get_input_position(&library.current->components[i], j), (Vector2){ -100, 0})) < 32.0F) {
-//                        circuit_connect(library.current, &library.current->components[i], j, connecting.componentID, connecting.output);
-//                        break;
-//                    }
-//                }
-//            }
-//
-//            CLEAR(connecting);
-//        }
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            ITERATE(circuit_graph_node_list, library.current->components->nodes, nodeItem) {
+                if (nodeItem->data == NULL) break;
+                circuit_component* component = nodeItem->data->data;
+
+                for (u64 j = 0; j < component->numOutputs; j++) {
+                    if (Vector2Distance(cursorPos, Vector2Add(get_output_position(component, j), (Vector2){ 100, 0 })) < 32.0F) {
+                        connectionComponent = component;
+                        connectionOutput = j;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT) && connectionComponent != NULL) {
+            ITERATE(circuit_graph_node_list, library.current->components->nodes, nodeItem) {
+                if (nodeItem->data == NULL) break;
+                circuit_component* component = nodeItem->data->data;
+
+                u32 numInputs = circuit_graph_edge_list_length(nodeItem->data->edges);
+
+                for (u32 j = 0; j < numInputs; j++) {
+                    if (Vector2Distance(cursorPos, Vector2Add(get_input_position(library.current, component, j), (Vector2){ -100, 0})) < 32.0F) {
+                        circuit_connect(library.current, component, j, connectionComponent, connectionOutput);
+                        break;
+                    }
+                }
+            }
+
+            connectionComponent = NULL;
+            connectionOutput = 0;
+        }
 
         // Component Movement
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
@@ -181,7 +190,7 @@ int main(void) {
 
         // Input Toggling
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-            for (circuit_graph_node_list* nodeItem = library.current->components->nodes; nodeItem != NULL; nodeItem = nodeItem->next) {
+            ITERATE(circuit_graph_node_list, library.current->components->nodes, nodeItem) {
                 if (nodeItem->data == NULL) break;
                 circuit_component* component = nodeItem->data->data;
 
@@ -295,9 +304,9 @@ int main(void) {
 
             draw_circuit(library.current);
 
-//            if (connecting.componentID != 0) {
-//                DrawLineBezier(Vector2Add(get_output_position(circuit_get_component(library.current, connecting.componentID), connecting.output), (Vector2){ 100, 0 }), cursorPos, 8.0F, CONNECTION);
-//            }
+            if (connectionComponent) {
+                DrawLineBezier(Vector2Add(get_output_position(connectionComponent, connectionOutput), (Vector2){ 100, 0 }), cursorPos, 8.0F, CONNECTION);
+            }
         }
         EndMode2D();
         {
