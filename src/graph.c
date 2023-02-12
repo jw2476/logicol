@@ -20,8 +20,14 @@ void graph_add_node(graph_graph* graph, void* data) {
 }
 
 void graph_connect(graph_graph* graph, void* from, void* to, void* data) {
-    graph_node* fromNode = graph_node_list_find(graph->nodes, from)->data;
-    graph_node* toNode = graph_node_list_find(graph->nodes, to)->data;
+    graph_node* fromNode = graph_find(graph, from);
+    graph_node* toNode;
+
+    if (to != NULL) {
+        toNode = graph_find(graph, to);
+    } else {
+        toNode = NULL;
+    }
 
     graph_edge* edge = malloc(sizeof(graph_edge));
     CLEAR(*edge);
@@ -33,7 +39,13 @@ void graph_connect(graph_graph* graph, void* from, void* to, void* data) {
 }
 
 graph_node* graph_find(graph_graph* graph, void* data) {
-    return graph_node_list_find(graph->nodes, data)->data;
+    for (graph_node_list* nodeItem = graph->nodes; nodeItem != NULL; nodeItem = nodeItem->next) {
+        if (nodeItem->data->data == data) {
+            return nodeItem->data;
+        }
+    }
+
+    return NULL;
 }
 
 void graph_delete(graph_graph* graph, void* data) {

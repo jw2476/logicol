@@ -56,4 +56,4 @@ static NAME ## _graph*(*NAME ## _new)() = (void*)graph_new;                     
 static void(*NAME ## _add_node)(NAME ## _graph*, N*) = (void*)graph_add_node;       \
 static void(*NAME ## _connect)(NAME ## _graph*, N*, N*, E*) = (void*)graph_connect; \
 static NAME ## _node*(*NAME ## _find)(NAME ## _graph*, N*) = (void*)graph_find;     \
-static void(*NAME ## _delete)(NAME ## _graph*, N*) = (void*)graph_delete;
+static void(*NAME ## _delete)(NAME ## _graph*, N*) = (void*)graph_delete

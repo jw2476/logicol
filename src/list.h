@@ -19,6 +19,7 @@ void list_remove(list* root, u32 index);
 void list_delete(list* root, void* data);
 u32 list_indexof(list* root, void* data);
 void list_traverse(list* root, list_traversal_func callback);
+u32 list_length(list* root);
 
 #define DEFINE_LIST(T, NAME)                                                           \
 typedef struct NAME ## _t NAME;                                                        \
@@ -35,4 +36,5 @@ static NAME*(*NAME ## _insert)(NAME*, u32, T*) = (void*)list_insert;            
 static void(*NAME ## _remove)(NAME*, u32) = (void*)list_remove;                        \
 static void(*NAME ## _delete)(NAME*, T*) = (void*)list_delete;                         \
 static u32(*NAME ## _indexof)(NAME*, T*) = (void*)list_indexof;                        \
-static void(*NAME ## _traverse)(NAME*, list_traversal_func) = (void*)list_traverse
+static void(*NAME ## _traverse)(NAME*, list_traversal_func) = (void*)list_traverse;    \
+static u32(*NAME ## _length)(NAME*) = (void*)list_length

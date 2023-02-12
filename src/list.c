@@ -94,3 +94,14 @@ void list_traverse(list* root, list_traversal_func callback) {
         item = item->next;
     }
 }
+
+u32 list_length(list* root) {
+    u32 length = 0;
+    list* item = root;
+    while (item != NULL) {
+        length++;
+        item = item->next;
+    }
+
+    return length;
+}

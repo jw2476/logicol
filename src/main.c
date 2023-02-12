@@ -19,8 +19,8 @@ int main(void) {
 
     i32 width = GetScreenWidth();
     i32 height = GetScreenHeight();
-    InitWindow(width, height, "raylib [core] example - basic window");
-    ToggleFullscreen();
+    InitWindow(640, 480, "raylib [core] example - basic window");
+//    ToggleFullscreen();
 
     SetTargetFPS(60);
 
@@ -49,36 +49,39 @@ int main(void) {
         Vector2 cursorPos = GetScreenToWorld2D(GetMousePosition(), camera);
 
         // Connections
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-            for (u64 i = 0; i < library.current->numComponents; i++) {
-                for (u64 j = 0; j < library.current->components[i].numOutputs; j++) {
-                    if (Vector2Distance(cursorPos, Vector2Add(get_output_position(&library.current->components[i], j), (Vector2){ 100, 0 })) < 32.0F) {
-                        connecting.componentID = library.current->components[i].id;
-                        connecting.output = j;
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT) && (connecting.componentID != 0)) {
-            for (u64 i = 0; i < library.current->numComponents; i++) {
-                for (u64 j = 0; j < library.current->components[i].numInputs; j++) {
-                    if (Vector2Distance(cursorPos, Vector2Add(get_input_position(&library.current->components[i], j), (Vector2){ -100, 0})) < 32.0F) {
-                        circuit_connect(library.current, &library.current->components[i], j, connecting.componentID, connecting.output);
-                        break;
-                    }
-                }
-            }
-
-            CLEAR(connecting);
-        }
+//        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+//            for (u64 i = 0; i < library.current->numComponents; i++) {
+//                for (u64 j = 0; j < library.current->components[i].numOutputs; j++) {
+//                    if (Vector2Distance(cursorPos, Vector2Add(get_output_position(&library.current->components[i], j), (Vector2){ 100, 0 })) < 32.0F) {
+//                        connecting.componentID = library.current->components[i].id;
+//                        connecting.output = j;
+//                        break;
+//                    }
+//                }
+//            }
+//        }
+//
+//        if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT) && (connecting.componentID != 0)) {
+//            for (u64 i = 0; i < library.current->numComponents; i++) {
+//                for (u64 j = 0; j < library.current->components[i].numInputs; j++) {
+//                    if (Vector2Distance(cursorPos, Vector2Add(get_input_position(&library.current->components[i], j), (Vector2){ -100, 0})) < 32.0F) {
+//                        circuit_connect(library.current, &library.current->components[i], j, connecting.componentID, connecting.output);
+//                        break;
+//                    }
+//                }
+//            }
+//
+//            CLEAR(connecting);
+//        }
 
         // Component Movement
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-            for (u64 i = 0; i < library.current->numComponents; i++) {
-                if (Vector2Distance(library.current->components[i].pos, cursorPos) < 32.0F) {
-                    moving = &library.current->components[i];
+            for (circuit_graph_node_list* nodeItem = library.current->components->nodes; nodeItem != NULL; nodeItem = nodeItem->next) {
+                if (nodeItem->data == NULL) break;
+
+                circuit_component* component = nodeItem->data->data;
+                if (Vector2Distance(component->pos, cursorPos) < 32.0F) {
+                    moving = component;
                 }
             }
         }
@@ -156,15 +159,15 @@ int main(void) {
         }
 
         // Optimization Keybinds
-        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyDown(KEY_LEFT_SHIFT) && IsKeyPressed(KEY_E)) {
-            circuit_embed_custom_components(&library, library.current);
-            INFO("Embedded custom components. DO NOT SAVE");
-        }
-
-        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyDown(KEY_LEFT_SHIFT) && IsKeyPressed(KEY_N)) {
-            circuit_nandify(&library, library.current);
-            INFO("Nandified all in-memory circuits. DO NOT SAVE");
-        }
+//        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyDown(KEY_LEFT_SHIFT) && IsKeyPressed(KEY_E)) {
+//            circuit_embed_custom_components(&library, library.current);
+//            INFO("Embedded custom components. DO NOT SAVE");
+//        }
+//
+//        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyDown(KEY_LEFT_SHIFT) && IsKeyPressed(KEY_N)) {
+//            circuit_nandify(&library, library.current);
+//            INFO("Nandified all in-memory circuits. DO NOT SAVE");
+//        }
 
         // Zooming
         float deltaZoom = (float)GetMouseWheelMove() * 0.05F;
@@ -178,10 +181,13 @@ int main(void) {
 
         // Input Toggling
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-            for (u64 i = 0; i < library.current->numComponents; i++) {
-                if (Vector2Distance(library.current->components[i].pos, cursorPos) < 32.0F) {
-                    if (library.current->components[i].type == INPUT) {
-                        library.current->components[i].internallyActive = !library.current->components[i].internallyActive;
+            for (circuit_graph_node_list* nodeItem = library.current->components->nodes; nodeItem != NULL; nodeItem = nodeItem->next) {
+                if (nodeItem->data == NULL) break;
+                circuit_component* component = nodeItem->data->data;
+
+                if (Vector2Distance(component->pos, cursorPos) < 32.0F) {
+                    if (component->type == INPUT) {
+                        component->internallyActive = !component->internallyActive;
                     }
                 }
             }
@@ -289,9 +295,9 @@ int main(void) {
 
             draw_circuit(library.current);
 
-            if (connecting.componentID != 0) {
-                DrawLineBezier(Vector2Add(get_output_position(circuit_get_component(library.current, connecting.componentID), connecting.output), (Vector2){ 100, 0 }), cursorPos, 8.0F, CONNECTION);
-            }
+//            if (connecting.componentID != 0) {
+//                DrawLineBezier(Vector2Add(get_output_position(circuit_get_component(library.current, connecting.componentID), connecting.output), (Vector2){ 100, 0 }), cursorPos, 8.0F, CONNECTION);
+//            }
         }
         EndMode2D();
         {
