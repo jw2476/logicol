@@ -26,29 +26,8 @@ circuit_component* circuit_add_component(circuit_circuit *circuit, circuit_compo
     component->id = circuit->nextID++;
     component->type = type;
 
-    switch (type) {
-        case AND:
-            component->name = "AND";
-            break;
-        case NAND:
-            component->name = "NAND";
-            break;
-        case OR:
-            component->name = "OR";
-            break;
-        case NOT:
-            component->name = "NOT";
-            break;
-        case INPUT:
-            component->name = "IN";
-            break;
-        case OUTPUT:
-            component->name = "OUT";
-            break;
-        case BUFFER:
-            component->name = "BUF";
-            break;
-    }
+    const char* names[] = { "AND", "NAND", "OR", "NOT", "IN", "OUT", "BUF" };
+    component->name = names[component->type];
 
     switch (type) {
         case AND:
@@ -64,6 +43,8 @@ circuit_component* circuit_add_component(circuit_circuit *circuit, circuit_compo
         case INPUT:
             component->numInputs = 0;
             break;
+        case CUSTOM:
+            CRITICAL("Trying to create a custom component using the normal constructor");
     }
 
     switch (type) {
@@ -78,6 +59,8 @@ circuit_component* circuit_add_component(circuit_circuit *circuit, circuit_compo
         case OUTPUT:
             component->numOutputs = 0;
             break;
+        case CUSTOM:
+            CRITICAL("Trying to create a custom component using the normal constructor");
     }
 
     component->inputs = malloc(sizeof(circuit_connection) * component->numInputs);
@@ -304,7 +287,7 @@ circuit_library circuit_library_init() {
 
     circuit_circuit* circuit = malloc(sizeof(circuit_circuit));
     circuit_init(circuit);
-    library.circuits = list_new(circuit);
+    library.circuits = circuit_circuit_list_new(circuit);
     library.current = circuit;
 
     return library;
@@ -313,7 +296,7 @@ circuit_library circuit_library_init() {
 circuit_circuit *circuit_library_create_circuit(circuit_library *library) {
     circuit_circuit* circuit = malloc(sizeof(circuit_circuit));
     circuit_init(circuit);
-    list_append(library->circuits, circuit);
+    circuit_circuit_list_append(library->circuits, circuit);
 
     return circuit;
 }

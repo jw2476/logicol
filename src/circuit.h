@@ -73,8 +73,10 @@ circuit_component* circuit_get_component(circuit_circuit* circuit, u64 id);
 void circuit_embed_custom_components(circuit_library* library, circuit_circuit* circuit);
 void circuit_nandify(circuit_library *library, circuit_circuit* circuit);
 
+DEFINE_LIST(circuit_circuit, circuit_circuit_list);
+
 typedef struct circuit_library_t {
-    list* circuits;
+    circuit_circuit_list* circuits;
     circuit_circuit* current;
 } circuit_library;
 

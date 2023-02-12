@@ -113,9 +113,10 @@ int main(void) {
         }
 
         if (insertMode && IsKeyPressed(KEY_ENTER)) {
-            for (list* circuit = library.circuits; circuit != NULL; circuit = circuit->next) {
-                if (strcmp(((circuit_circuit*)circuit->data)->name, inputBuffer) == 0) {
-                    circuit_add_custom_component(library.current, circuit->data, cursorPos);
+            for (circuit_circuit_list* item = library.circuits; item != NULL; item = item->next) {
+                circuit_circuit* circuit = item->data;
+                if (strcmp(circuit->name, inputBuffer) == 0) {
+                    circuit_add_custom_component(library.current, circuit, cursorPos);
                 }
             }
 
@@ -223,8 +224,8 @@ int main(void) {
         if (openMode && IsKeyPressed(KEY_ENTER)) {
             // Check if component is already in library
             bool found = false;
-            for (list* item = library.circuits; item != NULL; item = item->next) {
-                circuit_circuit* circuit = (circuit_circuit*)item->data;
+            for (circuit_circuit_list* item = library.circuits; item != NULL; item = item->next) {
+                circuit_circuit* circuit = item->data;
                 if (strcmp(inputBuffer, circuit->name) == 0) {
                     library.current = circuit;
                     found = true;

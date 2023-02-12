@@ -81,7 +81,7 @@ u32 list_indexof(list* root, void* data) {
     u32 index = 0;
     while (item != NULL && item->data != data) {
         index++;
-        item = item->next
+        item = item->next;
     }
 
     return index;
