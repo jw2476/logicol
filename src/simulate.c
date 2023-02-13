@@ -19,12 +19,27 @@ bool is_true(circuit_circuit* circuit, circuit_graph_node* node, u32 numOutput) 
         case BUFFER:
             return node->data->internallyActive;
         case CUSTOM:
-            CRITICAL("TODO: Implement custom component simulation");
+            CRITICAL("TODO: Custom component simulation");
+    }
+}
+
+void set_output(circuit_circuit* circuit, circuit_graph_node* node, u32 output, bool value) {
+    ITERATE(circuit_graph_node_list, circuit->components->nodes, nodeItem) {
+        circuit_graph_node* node = nodeItem->data;
+        ITERATE(circuit_graph_edge_list, node->edges, edgeItem) {
+            circuit_graph_edge *edge = edgeItem->data;
+            if (edge == NULL || edge->node == NULL) continue;
+
+            if (edge->node == node && edge->data->output == output) {
+                edge->data->on = value;
+            }
+        }
     }
 }
 
 void simulate(circuit_circuit* circuit) {
     circuit_graph_node_list* sorted = circuit_graph_topological_sort(circuit->components);
+    
     ITERATE(circuit_graph_node_list, sorted, sortedItem) {
         if (sortedItem->data == NULL) break;
 
@@ -35,18 +50,7 @@ void simulate(circuit_circuit* circuit) {
             }
 
             bool result = is_true(circuit, sortedItem->data, i);
-
-            ITERATE(circuit_graph_node_list, circuit->components->nodes, nodeItem) {
-                circuit_graph_node* node = nodeItem->data;
-                ITERATE(circuit_graph_edge_list, node->edges, edgeItem) {
-                    circuit_graph_edge* edge = edgeItem->data;
-                    if (edge == NULL || edge->node == NULL) continue;
-
-                    if (edge->node == sortedItem->data && edge->data->output == i) {
-                        edge->data->on = result;
-                    }
-                }
-            }
+            set_output(circuit, sortedItem->data, i, result);
         }
     }
 
@@ -56,5 +60,11 @@ void simulate(circuit_circuit* circuit) {
         if (component->type == BUFFER) {
             component->internallyActive = nodeItem->data->edges->data->data->on;
         }
+    }
+
+    while (sorted != NULL) {
+        circuit_graph_node_list* sortedNext = sorted->next;
+        free(sorted);
+        sorted = sortedNext;
     }
 }

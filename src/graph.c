@@ -64,13 +64,13 @@ void graph_delete(graph_graph* graph, void* data) {
 
 void graph_topological_sort_visit(graph_graph* graph, graph_node_list* sorted, graph_node* node) {
     if (node->marked) return;
+    node->marked = true;
 
     ITERATE(graph_edge_list, node->edges, edgeItem) {
         if (edgeItem->data == NULL || edgeItem->data->node == NULL) continue;
         graph_topological_sort_visit(graph, sorted, edgeItem->data->node);
     }
 
-    node->marked = true;
     graph_node_list_append(sorted, node);
 }
 
