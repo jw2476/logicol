@@ -91,5 +91,5 @@ graph_node_list* graph_topological_sort(graph_graph* graph) {
         }
     }
 
-    return graph_node_list_reverse(sorted);
+    return sorted;
 }

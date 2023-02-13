@@ -19,11 +19,7 @@ void make_inputs(circuit_circuit* circuit, circuit_component* component, u32 num
     }
 }
 
-circuit_component* circuit_add_component(circuit_circuit *circuit, circuit_component_type type, Vector2 pos) {
-    circuit_component *component = malloc(sizeof(circuit_component));
-    CLEAR(*component);
-    circuit_graph_add_node(circuit->components, component);
-
+circuit_component* circuit_init_component(circuit_circuit* circuit, circuit_component* component, circuit_component_type type, Vector2 pos) {
     component->type = type;
 
     const char* names[] = { "AND", "NAND", "OR", "NOT", "IN", "OUT", "BUF" };
@@ -43,7 +39,7 @@ circuit_component* circuit_add_component(circuit_circuit *circuit, circuit_compo
         case INPUT:
             break;
         case CUSTOM:
-            CRITICAL("Trying to create a custom component using the normal constructor");
+        CRITICAL("Trying to create a custom component using the normal constructor");
     }
 
     switch (type) {
@@ -59,7 +55,7 @@ circuit_component* circuit_add_component(circuit_circuit *circuit, circuit_compo
             component->numOutputs = 0;
             break;
         case CUSTOM:
-            CRITICAL("Trying to create a custom component using the normal constructor");
+        CRITICAL("Trying to create a custom component using the normal constructor");
     }
 
     component->pos = pos;
@@ -67,15 +63,11 @@ circuit_component* circuit_add_component(circuit_circuit *circuit, circuit_compo
     return component;
 }
 
-circuit_component* circuit_add_custom_component(circuit_circuit *circuit, circuit_circuit* inner, Vector2 pos) {
-    circuit_component *component = malloc(sizeof(circuit_component));
-    CLEAR(*component);
-    circuit_graph_add_node(circuit->components, component);
-
+circuit_component* circuit_init_custom_component(circuit_circuit *circuit, circuit_component* component, circuit_circuit* inner, Vector2 pos) {
     component->type = CUSTOM;
     component->name = inner->name;
 
-    ITERATE(circuit_graph_node_list, circuit->components->nodes, nodeItem) {
+    ITERATE(circuit_graph_node_list, inner->components->nodes, nodeItem) {
         circuit_component* innerComponent = nodeItem->data->data;
         if (innerComponent->type == INPUT) {
             circuit_graph_connect(circuit->components, component, NULL, NULL);
@@ -88,6 +80,22 @@ circuit_component* circuit_add_custom_component(circuit_circuit *circuit, circui
     component->inner = inner;
 
     return component;
+}
+
+circuit_component* circuit_add_component(circuit_circuit *circuit, circuit_component_type type, Vector2 pos) {
+    circuit_component *component = malloc(sizeof(circuit_component));
+    CLEAR(*component);
+    circuit_graph_add_node(circuit->components, component);
+
+    return circuit_init_component(circuit, component, type, pos);
+}
+
+circuit_component* circuit_add_custom_component(circuit_circuit *circuit, circuit_circuit* inner, Vector2 pos) {
+    circuit_component *component = malloc(sizeof(circuit_component));
+    CLEAR(*component);
+    circuit_graph_add_node(circuit->components, component);
+
+    return circuit_init_custom_component(circuit, component, inner, pos);
 }
 
 void circuit_connect(circuit_circuit *circuit, circuit_component *from, u32 input, circuit_component* to, u32 output) {

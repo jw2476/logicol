@@ -1,72 +1,60 @@
 #include "simulate.h"
 
-//bool is_true(circuit_circuit* circuit, circuit_component* component, u32 outputID) {
-//
-//    for (u32 i = 0; i < component->numInputs; i++) {
-//        if (component->inputs[i].componentID == 0) {
-//            component->inputs[i].on = false;
-//            continue;
-//        }
-//
-//        if (component->type == BUFFER) continue;
-//
-//        component->inputs[i].on = is_true(circuit, circuit_get_component(circuit, component->inputs[i].componentID), component->inputs[i].output);
-//    }
-//
-//    switch (component->type) {
-//        case AND:
-//            return component->inputs[0].on && component-> inputs[1].on;
-//        case NAND:
-//            return !(component->inputs[0].on && component-> inputs[1].on);
-//        case OR:
-//            return component->inputs[0].on || component->inputs[1].on;
-//        case NOT:
-//            return !component->inputs[0].on;
-//        case INPUT:
-//            return component->internallyActive;
-//        case OUTPUT:
-//            // THIS IS IMPOSSIBLE
-//            break;
-//        case BUFFER: {
-//            WARN("Cannot yet simulate buffers");
-//            return false;
-//        }
-//        case CUSTOM: {
-//            u32 counter = 0;
-//            for (u32 i = 0; i < component->inner->numComponents; i++) {
-//                if (component->inner->components[i].type == INPUT) {
-//                    component->inner->components[i].internallyActive = component->inputs[counter++].on;
-//                }
-//            }
-//
-//            simulate(component->inner);
-//
-//            counter = 0;
-//            for (u32 i = 0; i < component->inner->numComponents; i++) {
-//                if (component->inner->components[i].type == OUTPUT) {
-//                    if (counter == outputID) {
-//                        return component->inner->components[i].internallyActive;
-//                    }
-//                    counter++;
-//                }
-//            }
-//
-//            break;
-//        }
-//    }
-//}
-//
-//void test_output(circuit_circuit* circuit, circuit_component* component) {
-//    if (component->inputs[0].componentID == 0) return;
-//
-//    component->internallyActive = is_true(circuit, circuit_get_component(circuit, component->inputs[0].componentID), component->inputs[0].output);
-//    component->inputs[0].on = component->internallyActive;
-//}
+bool is_true(circuit_circuit* circuit, circuit_graph_node* node, u32 numOutput) {
+    circuit_component_type type = node->data->type;
+
+    switch (type) {
+        case AND:
+            return circuit_graph_edge_list_get(node->edges, 0)->data->data->on && circuit_graph_edge_list_get(node->edges, 1)->data->data->on;
+        case NAND:
+            return !(circuit_graph_edge_list_get(node->edges, 0)->data->data->on && circuit_graph_edge_list_get(node->edges, 1)->data->data->on);
+        case OR:
+            return circuit_graph_edge_list_get(node->edges, 0)->data->data->on || circuit_graph_edge_list_get(node->edges, 1)->data->data->on;
+        case NOT:
+            return !circuit_graph_edge_list_get(node->edges, 0)->data->data->on;
+        case INPUT:
+            return node->data->internallyActive;
+        case OUTPUT:
+            CRITICAL("Output nodes have no output wires, so is_true should never be called");
+        case BUFFER:
+            return node->data->internallyActive;
+        case CUSTOM:
+            CRITICAL("TODO: Implement custom component simulation");
+    }
+}
 
 void simulate(circuit_circuit* circuit) {
     circuit_graph_node_list* sorted = circuit_graph_topological_sort(circuit->components);
     ITERATE(circuit_graph_node_list, sorted, sortedItem) {
-        if (sorted->data == NULL) break;
-        INFO("%s", sortedItem->data->data->name);
+        if (sortedItem->data == NULL) break;
+
+        for (u32 i = 0; i < sorted->data->data->numOutputs; i++) {
+            if (sortedItem->data->data->type == OUTPUT) {
+                sortedItem->data->data->internallyActive = sortedItem->data->edges->data->data->on;
+                continue;
+            }
+
+            bool result = is_true(circuit, sortedItem->data, i);
+
+            ITERATE(circuit_graph_node_list, circuit->components->nodes, nodeItem) {
+                circuit_graph_node* node = nodeItem->data;
+                ITERATE(circuit_graph_edge_list, node->edges, edgeItem) {
+                    circuit_graph_edge* edge = edgeItem->data;
+                    if (edge == NULL || edge->node == NULL) continue;
+
+                    if (edge->node == sortedItem->data && edge->data->output == i) {
+                        edge->data->on = result;
+                    }
+                }
+            }
+        }
+    }
+
+    ITERATE(circuit_graph_node_list, circuit->components->nodes, nodeItem) {
+        if (nodeItem->data == NULL) break;
+        circuit_component* component = nodeItem->data->data;
+        if (component->type == BUFFER) {
+            component->internallyActive = nodeItem->data->edges->data->data->on;
+        }
     }
 }

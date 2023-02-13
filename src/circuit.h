@@ -54,6 +54,9 @@ typedef struct circuit_circuit_t {
 
 void circuit_init(circuit_circuit* circuit);
 
+circuit_component* circuit_init_component(circuit_circuit* circuit, circuit_component* component, circuit_component_type type, Vector2 pos);
+circuit_component* circuit_init_custom_component(circuit_circuit *circuit, circuit_component* component, circuit_circuit* inner, Vector2 pos);
+
 circuit_component* circuit_add_component(circuit_circuit* circuit, circuit_component_type type, Vector2 pos);
 circuit_component* circuit_add_custom_component(circuit_circuit *circuit, circuit_circuit* inner, Vector2 pos);
 void circuit_connect(circuit_circuit *circuit, circuit_component *from, u32 input, circuit_component* to, u32 output);
