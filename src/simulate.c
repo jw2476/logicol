@@ -25,8 +25,8 @@ bool is_true(circuit_circuit* circuit, circuit_graph_node* node, u32 numOutput) 
 
 void set_output(circuit_circuit* circuit, circuit_graph_node* node, u32 output, bool value) {
     ITERATE(circuit_graph_node_list, circuit->components->nodes, nodeItem) {
-        circuit_graph_node* node = nodeItem->data;
-        ITERATE(circuit_graph_edge_list, node->edges, edgeItem) {
+        circuit_graph_node* n = nodeItem->data;
+        ITERATE(circuit_graph_edge_list, n->edges, edgeItem) {
             circuit_graph_edge *edge = edgeItem->data;
             if (edge == NULL || edge->node == NULL) continue;
 
